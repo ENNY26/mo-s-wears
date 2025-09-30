@@ -8,6 +8,7 @@ import { CartProvider } from "./context/CartContext";
 import Cart from "./components/Cart";
 import AddProduct from "./admin/AddProduct";
 import AdminPage from "./admin/AdminPage";
+import EditProduct from "./admin/EditProduct"; // Add this import
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -138,6 +139,14 @@ function App() {
                 element={
                   <ProtectedAdminRoute>
                     <AddProduct />
+                  </ProtectedAdminRoute>
+                } 
+              />
+              <Route 
+                path="/admin/edit-product/:id" 
+                element={
+                  <ProtectedAdminRoute>
+                    <EditProduct />
                   </ProtectedAdminRoute>
                 } 
               />

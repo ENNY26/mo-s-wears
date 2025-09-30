@@ -1,9 +1,10 @@
+// components/ProductCard.jsx
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import placeholderImage from "../assets/placeholder.png"; // make sure this exists
+import { Link } from "react-router-dom";
 
 const ProductCard = ({ product }) => {
   const [selectedImage, setSelectedImage] = useState(0);
@@ -11,14 +12,6 @@ const ProductCard = ({ product }) => {
   const { user } = useAuth();
   const { addToCart } = useCart();
   const navigate = useNavigate();
-
-  // Defensive: return null if product or imageUrls are invalid
-  if (!product || !Array.isArray(product.imageUrls)) {
-    return null;
-  }
-
-  const hasImages = product.imageUrls.length > 0;
-  const displayedImage = hasImages ? product.imageUrls[selectedImage] : placeholderImage;
 
   const handleAddToCart = (size) => {
     if (!user) {
@@ -33,7 +26,7 @@ const ProductCard = ({ product }) => {
   };
 
   const quickAdd = () => {
-    if (product.sizes?.length === 1) {
+    if (product.sizes.length === 1) {
       handleAddToCart(product.sizes[0]);
     } else {
       setShowSizeModal(true);
@@ -46,23 +39,33 @@ const ProductCard = ({ product }) => {
         {/* Product Image */}
         <div className="relative overflow-hidden">
           <img
-            src={displayedImage}
+            src={product.imageUrls?.[selectedImage] || '/placeholder-image.jpg'}
             alt={product.title}
             className="w-full h-80 object-cover group-hover:scale-105 transition-transform duration-500"
+            onError={(e) => {
+              e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjMyMCIgdmlld0JveD0iMCAwIDMyMCAzMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMjAiIGhlaWdodD0iMzIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNjAgMTYwQzE2OC44MzY2IDE2MCAxNzYgMTUyLjgzNjYgMTc2IDE0NEMxNzYgMTM1LjE2MzQgMTY4LjgzNjYgMTI4IDE2MCAxMjhDMTUxLjE2MzQgMTI4IDE0NCAxMzUuMTYzNCAxNDQgMTQ0QzE0NCAxNTIuODM2NiAxNTEuMTYzNCAxNjAgMTYwIDE2MFoiIGZpbGw9IiM4QTkwQUEiLz4KPHBhdGggZD0iTTE5MiAyMDhDMTkyIDIxNi44MzY2IDE4NC44MzY2IDIyNCAxNzYgMjI0SDE0NEMxMzUuMTYzNCAyMjQgMTI4IDIxNi44MzY2IDEyOCAyMDhWMTc2QzEyOCAxNjcuMTYzNCAxMzUuMTYzNCAxNjAgMTQ0IDE2MEgxNzZDMTg0LjgzNjYgMTYwIDE5MiAxNjcuMTYzNCAxOTIgMTc2VjIwOFoiIGZpbGw9IiM4QTkwQUEiLz4KPC9zdmc+Cg==';
+            }}
           />
-
+          
           {/* Image Thumbnails */}
-          {hasImages && (
+          {product.imageUrls && product.imageUrls.length > 1 && (
             <div className="absolute bottom-2 left-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               {product.imageUrls.slice(0, 3).map((url, index) => (
                 <button
                   key={index}
                   onClick={() => setSelectedImage(index)}
                   className={`w-8 h-8 border-2 ${
-                    selectedImage === index ? "border-black" : "border-white"
+                    selectedImage === index ? 'border-black' : 'border-white'
                   }`}
                 >
-                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <img 
+                    src={url} 
+                    alt="" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNiAxNkMxNi44ODMzIDE2IDE3LjY2NjcgMTUuNDE2NyAxNy44ODMzIDE0LjY2NjdDMTguMSAxMy45MTY3IDE3LjcxNjcgMTMuMTY2NyAxNyAxMi44MzMzVjE0QzE3IDE0LjU1MjMgMTYuNTUyMyAxNSAxNiAxNUMxNS40NDc3IDE1IDE1IDE0LjU1MjMgMTUgMTRWMTIuODMzM0MxNC4yODMzIDEzLjE2NjcgMTMuOSAxMy45MTY3IDE0LjExNjcgMTQuNjY2N0MxNC4zMzMzIDE1LjQxNjcgMTUuMTE2NyAxNiAxNiAxNloiIGZpbGw9IiM4QTkwQUEiLz4KPC9zdmc+Cg==';
+                    }}
+                  />
                 </button>
               ))}
             </div>
@@ -74,17 +77,12 @@ const ProductCard = ({ product }) => {
             className="absolute top-3 right-3 bg-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black hover:text-white shadow-lg"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
           </button>
 
           {/* Multiple Images Indicator */}
-          {hasImages && product.imageUrls.length > 1 && (
+          {product.imageUrls && product.imageUrls.length > 1 && (
             <div className="absolute top-3 left-3 bg-black bg-opacity-70 text-white px-2 py-1 rounded-full text-xs">
               {product.imageUrls.length} photos
             </div>
@@ -96,15 +94,33 @@ const ProductCard = ({ product }) => {
           <h3 className="font-medium text-gray-900 mb-1 line-clamp-2">{product.title}</h3>
           <p className="text-gray-600 text-sm mb-2 line-clamp-2">{product.description}</p>
           <div className="flex items-center justify-between">
-            <span className="text-lg font-semibold text-gray-900">${product.price}</span>
+            <span className="text-lg font-semibold text-gray-900">${product.price?.toFixed(2)}</span>
             <span className="text-xs text-gray-500 uppercase">{product.category}</span>
           </div>
         </div>
       </div>
 
+
+          import { Link } from "react-router-dom";
+
+// Add this inside the ProductCard component, after the product info
+{user?.email === "danalysis856@gmail.com" && (
+  <div className="absolute top-3 left-3 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+    <Link
+      to={`/admin/edit-product/${product.id}`}
+      className="bg-blue-500 text-white p-1 rounded-full hover:bg-blue-600 transition-colors duration-200"
+      title="Edit Product"
+    >
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+      </svg>
+    </Link>
+  </div>
+)}
+
       {/* Size Selection Modal */}
       {showSizeModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
             <h3 className="text-lg font-semibold mb-4">Select Size</h3>
             <div className="grid grid-cols-3 gap-2 mb-6">
