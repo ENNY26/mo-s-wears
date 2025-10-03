@@ -1,38 +1,11 @@
-import { BrowserRouter as Router, Routes, Route, Link, Navigate } from "react-router-dom";
-import { useState } from "react";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Home from "./pages/Homepage";
-import Profile from "./pages/Profile";
-import Orders from "./pages/Orders";
-import Addresses from "./pages/Addresses";
-import { useAuth } from "./context/AuthContext";
-import { useCart } from "./context/CartContext";
-import { useUser } from "./context/UserContext";
-import { CartProvider } from "./context/CartContext";
-import Cart from "./components/Cart";
-import AddProduct from "./admin/AddProduct";
-import AdminPage from "./admin/AdminPage";
-import EditProduct from "./admin/EditProduct";
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { UserProvider } from "./context/UserContext";
+// In Navigation component - Add profile dropdown
+import { useUser } from '../context/UserContext';
 
-// Navigation Component
 function Navigation() {
   const { user, logout } = useAuth();
   const { getCartItemsCount } = useCart();
   const { userProfile } = useUser();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      setShowProfileDropdown(false);
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-  };
 
   return (
     <nav className="bg-white shadow-lg border-b border-gray-200 sticky top-0 z-50">
@@ -40,17 +13,10 @@ function Navigation() {
         <div className="flex justify-between items-center h-16">
           {/* Left side - Logo and main navigation */}
           <div className="flex items-center space-x-8">
-            <Link 
-              to="/" 
-              className="text-xl font-bold text-gray-800 hover:text-blue-600 transition-colors duration-200"
-            >
+            <Link to="/" className="text-xl font-bold text-gray-800 hover:text-blue-600 transition-colors duration-200">
               FashionStore
             </Link>
-            
-            <Link 
-              to="/" 
-              className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-100 transition-colors duration-200"
-            >
+            <Link to="/" className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-100 transition-colors duration-200">
               Home
             </Link>
           </div>
@@ -59,10 +25,7 @@ function Navigation() {
           <div className="flex items-center space-x-4">
             {/* Cart Icon */}
             {user && (
-              <Link 
-                to="/cart" 
-                className="relative p-2 text-gray-700 hover:text-blue-600 transition-colors duration-200"
-              >
+              <Link to="/cart" className="relative p-2 text-gray-700 hover:text-blue-600 transition-colors duration-200">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
@@ -131,26 +94,17 @@ function Navigation() {
 
             {/* Admin Link */}
             {user?.email === "danalysis856@gmail.com" && (
-              <Link 
-                to="/admin"
-                className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-100 transition-colors duration-200"
-              >
+              <Link to="/admin" className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-100 transition-colors duration-200">
                 Admin
               </Link>
             )}
 
             {!user && (
               <div className="flex items-center space-x-3">
-                <Link 
-                  to="/login"
-                  className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-100 transition-colors duration-200"
-                >
+                <Link to="/login" className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-100 transition-colors duration-200">
                   Login
                 </Link>
-                <Link 
-                  to="/register"
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                >
+                <Link to="/register" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                   Register
                 </Link>
               </div>
@@ -161,83 +115,3 @@ function Navigation() {
     </nav>
   );
 }
-
-// Main App Component
-function App() {
-  return (
-    <CartProvider>
-      <UserProvider>
-        <Router>
-          <div className="min-h-screen bg-gray-50">
-            <Navigation />
-            
-            <main>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/orders" element={<Orders />} />
-                <Route path="/addresses" element={<Addresses />} />
-                
-                {/* Admin Routes */}
-                <Route 
-                  path="/admin" 
-                  element={
-                    <ProtectedAdminRoute>
-                      <AdminPage />
-                    </ProtectedAdminRoute>
-                  } 
-                />
-                <Route 
-                  path="/admin/add-product" 
-                  element={
-                    <ProtectedAdminRoute>
-                      <AddProduct />
-                    </ProtectedAdminRoute>
-                  } 
-                />
-                <Route 
-                  path="/admin/edit-product/:id" 
-                  element={
-                    <ProtectedAdminRoute>
-                      <EditProduct />
-                    </ProtectedAdminRoute>
-                  } 
-                />
-              </Routes>
-            </main>
-
-            {/* Toast Container */}
-            <ToastContainer
-              position="top-right"
-              autoClose={5000}
-              hideProgressBar={false}
-              newestOnTop={false}
-              closeOnClick
-              rtl={false}
-              pauseOnFocusLoss
-              draggable
-              pauseOnHover
-              theme="light"
-            />
-          </div>
-        </Router>
-      </UserProvider>
-    </CartProvider>
-  );
-}
-
-// Protected Admin Route Component
-function ProtectedAdminRoute({ children }) {
-  const { user } = useAuth();
-  
-  if (user?.email === "danalysis856@gmail.com") {
-    return children;
-  }
-  
-  return <Navigate to="/" replace />;
-}
-
-export default App;
