@@ -17,7 +17,6 @@ import EditProduct from "./admin/EditProduct";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { UserProvider } from "./context/UserContext";
-
 // Navigation Component
 function Navigation() {
   const { user, logout } = useAuth();
