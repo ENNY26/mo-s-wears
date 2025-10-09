@@ -43,7 +43,7 @@ function Navigation() {
               to="/" 
               className="text-xl font-bold text-gray-800 hover:text-blue-600 transition-colors duration-200"
             >
-              FashionStore
+             Mo's Clothing
             </Link>
             
             <Link 

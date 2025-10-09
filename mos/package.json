@@ -10,11 +10,19 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emailjs/browser": "^4.4.1",
+    "@headlessui/react": "^2.2.9",
+    "@heroicons/react": "^2.2.0",
+    "@paypal/checkout-server-sdk": "^1.0.3",
     "@paypal/react-paypal-js": "^8.9.2",
+    "@square/web-sdk": "^2.1.0",
     "@tailwindcss/postcss": "^4.1.13",
+    "axios": "^1.12.2",
+    "date-fns": "^4.1.0",
     "firebase": "^12.3.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-hook-form": "^7.64.0",
     "react-router-dom": "^7.9.3",
     "react-toast": "^1.0.3",
     "react-toastify": "^11.0.5"
