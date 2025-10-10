@@ -17,6 +17,8 @@ import EditProduct from "./admin/EditProduct";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { UserProvider } from "./context/UserContext";
+import { PaymentProvider } from './context/PaymentContext';
+import Checkout from "./components/Checkout";
 // Navigation Component
 function Navigation() {
   const { user, logout } = useAuth();
@@ -161,68 +163,36 @@ function Navigation() {
   );
 }
 
-// Main App Component
+
 function App() {
   return (
     <CartProvider>
       <UserProvider>
-        <Router>
-          <div className="min-h-screen bg-gray-50">
-            <Navigation />
-            
-            <main>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/orders" element={<Orders />} />
-                <Route path="/addresses" element={<Addresses />} />
-                
-                {/* Admin Routes */}
-                <Route 
-                  path="/admin" 
-                  element={
-                    <ProtectedAdminRoute>
-                      <AdminPage />
-                    </ProtectedAdminRoute>
-                  } 
-                />
-                <Route 
-                  path="/admin/add-product" 
-                  element={
-                    <ProtectedAdminRoute>
-                      <AddProduct />
-                    </ProtectedAdminRoute>
-                  } 
-                />
-                <Route 
-                  path="/admin/edit-product/:id" 
-                  element={
-                    <ProtectedAdminRoute>
-                      <EditProduct />
-                    </ProtectedAdminRoute>
-                  } 
-                />
-              </Routes>
-            </main>
-
-            {/* Toast Container */}
-            <ToastContainer
-              position="top-right"
-              autoClose={5000}
-              hideProgressBar={false}
-              newestOnTop={false}
-              closeOnClick
-              rtl={false}
-              pauseOnFocusLoss
-              draggable
-              pauseOnHover
-              theme="light"
-            />
-          </div>
-        </Router>
+        <PaymentProvider>
+          <Router>
+            <div className="min-h-screen bg-gray-50">
+              <Navigation />
+              <main>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/orders" element={<Orders />} />
+                  <Route path="/addresses" element={<Addresses />} />
+                  
+                  {/* Admin Routes */}
+                  <Route path="/admin" element={<ProtectedAdminRoute><AdminPage /></ProtectedAdminRoute>} />
+                  <Route path="/admin/add-product" element={<ProtectedAdminRoute><AddProduct /></ProtectedAdminRoute>} />
+                  <Route path="/admin/edit-product/:id" element={<ProtectedAdminRoute><EditProduct /></ProtectedAdminRoute>} />
+                </Routes>
+              </main>
+              <ToastContainer />
+            </div>
+          </Router>
+        </PaymentProvider>
       </UserProvider>
     </CartProvider>
   );
