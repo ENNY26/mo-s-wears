@@ -8,13 +8,16 @@ async function safeJson(resp) {
 
 export const createOrderOnServer = async (totalAmount) => {
   const url = FUNCTIONS_BASE
-    ? `${FUNCTIONS_BASE.replace(/\/$/, "")}/paypalApi/paypalCreateOrder`
-    : `/api/paypalCreateOrder`;
+    ? `${FUNCTIONS_BASE.replace(/\/$/, "")}/api/create-paypal-order`  // ✅ Updated endpoint
+    : `/api/create-paypal-order`;  // ✅ Updated endpoint
 
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ total: totalAmount })
+    body: JSON.stringify({ 
+      amount: totalAmount.toString(),  // ✅ Changed from 'total' to 'amount'
+      currency: "USD"
+    })
   });
 
   if (!res.ok) {
@@ -23,18 +26,18 @@ export const createOrderOnServer = async (totalAmount) => {
   }
 
   const data = await safeJson(res);
-  return data?.id;
+  return data?.orderId;  // ✅ Changed from data.id to data.orderId
 };
 
 export const captureOrderOnServer = async (orderId) => {
   const url = FUNCTIONS_BASE
-    ? `${FUNCTIONS_BASE.replace(/\/$/, "")}/paypalApi/paypalCaptureOrder/${orderId}`
-    : `/api/paypalCaptureOrder/${orderId}`;
+    ? `${FUNCTIONS_BASE.replace(/\/$/, "")}/api/capture-paypal-order`  // ✅ Updated endpoint
+    : `/api/capture-paypal-order`;  // ✅ Updated endpoint
 
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({})
+    body: JSON.stringify({ orderId })  // ✅ Send as JSON body instead of URL param
   });
 
   if (!res.ok) {

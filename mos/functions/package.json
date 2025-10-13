@@ -13,6 +13,8 @@
   },
   "main": "index.js",
   "dependencies": {
+    "@paypal/checkout-server-sdk": "^1.0.3",
+    "@paypal/paypal-server-sdk": "^1.1.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "firebase-admin": "^12.7.0",

@@ -1,67 +1,264 @@
-import functions from "firebase-functions";
+import { onRequest } from "firebase-functions/v2/https";
+import * as logger from "firebase-functions/logger";
+import { initializeApp } from "firebase-admin/app";
 import express from "express";
 import cors from "cors";
-import paypal from "@paypal/checkout-server-sdk";
-import dotenv from "dotenv";
 
-dotenv.config(); // loads .env locally (ignored in deployed env)
+// PayPal SDK
+import * as paypal from "@paypal/checkout-server-sdk";
 
-// --- Express setup ---
+initializeApp();
+
 const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json());
 
-// --- PayPal client setup ---
-const Environment =
-  process.env.NODE_ENV === "production"
-    ? paypal.core.LiveEnvironment
-    : paypal.core.SandboxEnvironment;
+// PayPal Live Configuration
+const paypalClientId = process.env.VITE_PAYPAL_CLIENT_ID || "";
+const paypalSecretKey = process.env.VITE_PAYPAL_SECRET_KEY || "";
 
-const client = new paypal.core.PayPalHttpClient(
-  new Environment(
-    process.env.PAYPAL_CLIENT_ID,
-    process.env.PAYPAL_SECRET
-  )
-);
+// Validate that we have the required credentials
+if (!paypalClientId || !paypalSecretKey) {
+  logger.error("Missing PayPal credentials. Please check your environment variables.");
+}
 
-// --- Create PayPal Order ---
-app.post("/paypalCreateOrder", async (req, res) => {
+// Configure PayPal LIVE environment
+const environment = new paypal.core.LiveEnvironment(paypalClientId, paypalSecretKey);
+const paypalClient = new paypal.core.PayPalHttpClient(environment);
+
+// Website URL
+const WEBSITE_URL = "https://mo-s-wears.vercel.app";
+
+// Health check endpoint
+app.get("/", (req, res) => {
+  res.status(200).json({ 
+    message: "Mo's Wears PayPal Live API is running", 
+    environment: "LIVE",
+    website: WEBSITE_URL,
+    status: "Ready to process real payments"
+  });
+});
+
+// Create PayPal order
+app.post("/create-paypal-order", async (req, res) => {
   try {
-    const { total } = req.body;
+    const { 
+      amount, 
+      currency = "USD",
+      items = [],
+      description = "Purchase from Mo's Wears",
+      customerEmail,
+      shippingAddress
+    } = req.body;
+
+    // Validate required fields
+    if (!amount || isNaN(parseFloat(amount))) {
+      return res.status(400).json({ 
+        success: false,
+        error: "Valid amount is required" 
+      });
+    }
 
     const request = new paypal.orders.OrdersCreateRequest();
-    request.requestBody({
-      intent: "CAPTURE",
-      purchase_units: [
-        {
-          amount: { currency_code: "USD", value: total },
+    
+    // Build purchase unit
+    const purchaseUnit = {
+      amount: {
+        currency_code: currency,
+        value: amount,
+        breakdown: {
+          item_total: {
+            currency_code: currency,
+            value: amount
+          }
+        }
+      },
+      description: description,
+    };
+
+    // Add items if provided
+    if (items.length > 0) {
+      purchaseUnit.items = items;
+    }
+
+    // Add shipping if provided
+    if (shippingAddress) {
+      purchaseUnit.shipping = {
+        name: {
+          full_name: shippingAddress.fullName || ""
         },
-      ],
+        address: {
+          address_line_1: shippingAddress.addressLine1 || "",
+          address_line_2: shippingAddress.addressLine2 || "",
+          admin_area_2: shippingAddress.city || "",
+          admin_area_1: shippingAddress.state || "",
+          postal_code: shippingAddress.postalCode || "",
+          country_code: shippingAddress.countryCode || "US"
+        }
+      };
+    }
+
+    const requestBody = {
+      intent: "CAPTURE",
+      purchase_units: [purchaseUnit],
+      application_context: {
+        brand_name: "Mo's Wears",
+        landing_page: "BILLING",
+        user_action: "PAY_NOW",
+        shipping_preference: shippingAddress ? "SET_PROVIDED_ADDRESS" : "NO_SHIPPING",
+        return_url: `${WEBSITE_URL}/payment-success`,
+        cancel_url: `${WEBSITE_URL}/payment-cancelled`
+      }
+    };
+
+    request.requestBody(requestBody);
+
+    const response = await paypalClient.execute(request);
+    
+    logger.info("Live PayPal order created:", { 
+      orderId: response.result.id,
+      amount: amount,
+      currency: currency
     });
 
-    const order = await client.execute(request);
-    res.status(200).json({ id: order.result.id });
+    res.status(200).json({
+      success: true,
+      orderId: response.result.id,
+      status: response.result.status,
+      links: response.result.links
+    });
+
   } catch (error) {
-    console.error("❌ Error creating order:", error);
-    res.status(500).json({ error: "Error creating order" });
+    logger.error("Create PayPal order error:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to create PayPal order",
+      details: error.message 
+    });
   }
 });
 
-// --- Capture PayPal Order ---
-app.post("/paypalCaptureOrder", async (req, res) => {
+// Capture PayPal order
+app.post("/capture-paypal-order", async (req, res) => {
   try {
-    const { orderID } = req.body;
+    const { orderId, orderData } = req.body;
 
-    const request = new paypal.orders.OrdersCaptureRequest(orderID);
+    if (!orderId) {
+      return res.status(400).json({ 
+        success: false,
+        error: "Order ID is required" 
+      });
+    }
+
+    const request = new paypal.orders.OrdersCaptureRequest(orderId);
     request.requestBody({});
 
-    const capture = await client.execute(request);
-    res.status(200).json(capture.result);
+    const response = await paypalClient.execute(request);
+    
+    const capture = response.result;
+    const captureDetails = capture.purchase_units[0].payments.captures[0];
+    
+    logger.info("Live PayPal order captured:", { 
+      orderId: orderId,
+      captureId: captureDetails.id,
+      status: captureDetails.status,
+      amount: captureDetails.amount.value,
+      currency: captureDetails.amount.currency_code
+    });
+
+    // Log successful payment for business records
+    logger.info("PAYMENT SUCCESS - Mo's Wears", {
+      captureId: captureDetails.id,
+      orderId: orderId,
+      amount: captureDetails.amount.value,
+      currency: captureDetails.amount.currency_code,
+      status: captureDetails.status,
+      timestamp: new Date().toISOString()
+    });
+
+    res.status(200).json({
+      success: true,
+      capture: {
+        id: captureDetails.id,
+        status: captureDetails.status,
+        amount: captureDetails.amount.value,
+        currency: captureDetails.amount.currency_code,
+        create_time: captureDetails.create_time,
+        update_time: captureDetails.update_time,
+        payer_email: capture.payer?.email_address || null
+      },
+      order: {
+        id: orderId,
+        status: capture.status
+      }
+    });
+
   } catch (error) {
-    console.error("❌ Error capturing order:", error);
-    res.status(500).json({ error: "Error capturing order" });
+    logger.error("Capture PayPal order error:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to capture PayPal order",
+      details: error.message,
+      orderId: req.body.orderId
+    });
   }
 });
 
-// --- Export the Cloud Function ---
-export const paypalApi = functions.https.onRequest(app);
+// Get order details
+app.get("/paypal-order/:orderId", async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!orderId) {
+      return res.status(400).json({ 
+        success: false,
+        error: "Order ID is required" 
+      });
+    }
+
+    const request = new paypal.orders.OrdersGetRequest(orderId);
+    const response = await paypalClient.execute(request);
+
+    res.status(200).json({
+      success: true,
+      order: response.result
+    });
+
+  } catch (error) {
+    logger.error("Get PayPal order error:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to get PayPal order details",
+      details: error.message 
+    });
+  }
+});
+
+// Verify PayPal configuration
+app.get("/paypal-config", (req, res) => {
+  const config = {
+    environment: "LIVE",
+    clientId: paypalClientId ? `${paypalClientId.substring(0, 10)}...` : "Not set",
+    hasSecretKey: !!paypalSecretKey,
+    baseUrl: process.env.VITE_FIREBASE_FUNCTIONS_BASE_URL,
+    websiteUrl: WEBSITE_URL
+  };
+  
+  res.status(200).json({
+    success: true,
+    message: "PayPal Live Configuration",
+    config
+  });
+});
+
+// Payment success callback (for redirects)
+app.get("/payment-success", (req, res) => {
+  res.redirect(`${WEBSITE_URL}/payment-success?${new URLSearchParams(req.query)}`);
+});
+
+// Payment cancelled callback (for redirects)
+app.get("/payment-cancelled", (req, res) => {
+  res.redirect(`${WEBSITE_URL}/payment-cancelled?${new URLSearchParams(req.query)}`);
+});
+
+export const api = onRequest(app);
