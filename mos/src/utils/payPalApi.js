@@ -35,11 +35,11 @@ export const createOrderOnServer = async (totalAmount) => {
   const data = await safeJson(res);
   console.log("Create order response data:", data);
   
-  if (!data || !data.orderId) {
-    throw new Error("Invalid response from server: missing orderId");
+  if (!data || !data.id) {
+    throw new Error("Invalid response from server: missing id");
   }
   
-  return data.orderId;
+  return data.id;
 };
 
 export const captureOrderOnServer = async (orderId) => {

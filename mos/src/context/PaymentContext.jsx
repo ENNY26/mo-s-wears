@@ -17,7 +17,7 @@ export const PaymentProvider = ({ children }) => {
   const [processingPayment, setProcessingPayment] = useState(false);
 
   const firebaseBase =
-    "https://us-central1-mo-s-wears.cloudfunctions.net"; // 👈 Replace YOUR_PROJECT_ID
+    "https://us-central1-mo-s-wears.cloudfunctions.net/api/create-paypal-order"; // 👈 Replace YOUR_PROJECT_ID
 
   const createOrderRecord = async (paymentData, paymentMethod) => {
     try {
