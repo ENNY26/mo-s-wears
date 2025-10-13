@@ -56,7 +56,7 @@ const ProductCard = ({ product }) => {
           <img
             src={product.imageUrls?.[selectedImage] || "/placeholder-image.jpg"}
             alt={product.title}
-            className="w-full h-80 object-cover group-hover:scale-105 transition-transform duration-500"
+            className="w-full h-70 object-cover group-hover:scale-105 transition-transform duration-500"
             onError={(e) => {
               e.target.src = "/placeholder-image.jpg";
             }}
