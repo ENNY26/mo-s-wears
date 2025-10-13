@@ -1,83 +1,67 @@
-const functions = require("firebase-functions");
-const express = require("express");
-const cors = require("cors");
-const fetch = require("node-fetch");
+import functions from "firebase-functions";
+import express from "express";
+import cors from "cors";
+import paypal from "@paypal/checkout-server-sdk";
+import dotenv from "dotenv";
 
+dotenv.config(); // loads .env locally (ignored in deployed env)
+
+// --- Express setup ---
 const app = express();
-
-// ✅ Enable CORS (allow localhost + your future production domain)
-app.use(cors({ origin: ["http://localhost:5173", "https://mo-s-wears.vercel.app"] }));
+app.use(cors({ origin: true }));
 app.use(express.json());
 
-// ✅ PayPal credentials
-const PAYPAL_CLIENT_ID = functions.config().paypal.client_id;
-const PAYPAL_SECRET = functions.config().paypal.secret;
+// --- PayPal client setup ---
+const Environment =
+  process.env.NODE_ENV === "production"
+    ? paypal.core.LiveEnvironment
+    : paypal.core.SandboxEnvironment;
 
-// ✅ PayPal API base URL
-const PAYPAL_API = "https://api-m.sandbox.paypal.com";
+const client = new paypal.core.PayPalHttpClient(
+  new Environment(
+    process.env.PAYPAL_CLIENT_ID,
+    process.env.PAYPAL_SECRET
+  )
+);
 
-// -----------------------------------------------
-// CREATE ORDER
-// -----------------------------------------------
+// --- Create PayPal Order ---
 app.post("/paypalCreateOrder", async (req, res) => {
   try {
-    const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString("base64");
+    const { total } = req.body;
 
-    const response = await fetch(`${PAYPAL_API}/v2/checkout/orders`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Basic ${auth}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        intent: "CAPTURE",
-        purchase_units: [
-          {
-            amount: {
-              currency_code: "USD",
-              value: req.body.total,
-            },
-          },
-        ],
-      }),
+    const request = new paypal.orders.OrdersCreateRequest();
+    request.requestBody({
+      intent: "CAPTURE",
+      purchase_units: [
+        {
+          amount: { currency_code: "USD", value: total },
+        },
+      ],
     });
 
-    const data = await response.json();
-    // ✅ Return only the order ID (what your frontend expects)
-    if (data && data.id) {
-      res.status(200).json({ id: data.id });
-    } else {
-      res.status(500).json({ error: "No PayPal order ID returned", details: data });
-    }
-  } catch (err) {
-    console.error("❌ Error creating PayPal order:", err);
-    res.status(500).json({ error: err.message });
+    const order = await client.execute(request);
+    res.status(200).json({ id: order.result.id });
+  } catch (error) {
+    console.error("❌ Error creating order:", error);
+    res.status(500).json({ error: "Error creating order" });
   }
 });
 
-// -----------------------------------------------
-// CAPTURE ORDER
-// -----------------------------------------------
+// --- Capture PayPal Order ---
 app.post("/paypalCaptureOrder", async (req, res) => {
   try {
-    const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString("base64");
-    const { paymentID } = req.body;
+    const { orderID } = req.body;
 
-    const response = await fetch(`${PAYPAL_API}/v2/checkout/orders/${paymentID}/capture`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Basic ${auth}`,
-        "Content-Type": "application/json",
-      },
-    });
+    const request = new paypal.orders.OrdersCaptureRequest(orderID);
+    request.requestBody({});
 
-    const data = await response.json();
-    res.status(200).json(data);
-  } catch (err) {
-    console.error("❌ Error capturing PayPal order:", err);
-    res.status(500).json({ error: err.message });
+    const capture = await client.execute(request);
+    res.status(200).json(capture.result);
+  } catch (error) {
+    console.error("❌ Error capturing order:", error);
+    res.status(500).json({ error: "Error capturing order" });
   }
 });
 
-// ✅ Export entire app as one HTTPS function
-exports.paypalApi = functions.https.onRequest(app);
+// --- Export the Cloud Function ---
+export const paypalApi = functions.https.onRequest(app);
