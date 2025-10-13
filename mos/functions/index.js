@@ -43,7 +43,12 @@ app.post("/paypalCreateOrder", async (req, res) => {
     });
 
     const data = await response.json();
-    res.status(200).json(data);
+    // ✅ Return only the order ID (what your frontend expects)
+    if (data && data.id) {
+      res.status(200).json({ id: data.id });
+    } else {
+      res.status(500).json({ error: "No PayPal order ID returned", details: data });
+    }
   } catch (err) {
     console.error("❌ Error creating PayPal order:", err);
     res.status(500).json({ error: err.message });
