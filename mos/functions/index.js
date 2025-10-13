@@ -6,7 +6,7 @@ const fetch = require("node-fetch");
 const app = express();
 
 // ✅ Enable CORS (allow localhost + your future production domain)
-app.use(cors({ origin: ["http://localhost:5173", "https://your-production-domain.com"] }));
+app.use(cors({ origin: ["http://localhost:5173", "https://mo-s-wears.vercel.app"] }));
 app.use(express.json());
 
 // ✅ PayPal credentials
