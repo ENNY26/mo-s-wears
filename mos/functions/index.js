@@ -10,16 +10,48 @@ import * as paypal from "@paypal/checkout-server-sdk";
 initializeApp();
 
 const app = express();
-app.use(cors({ origin: true }));
+
+// Enhanced CORS configuration
+const corsOptions = {
+  origin: [
+    "http://localhost:5173",
+    "https://mo-s-wears.vercel.app",
+    "https://mo-s-wears.web.app",
+    "https://mo-s-wears.firebaseapp.com"
+  ],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Accept"]
+};
+
+app.use(cors(corsOptions));
+
+// Handle preflight requests for all routes
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept");
+    res.header("Access-Control-Max-Age", "86400"); // 24 hours
+    return res.status(204).send();
+  }
+  next();
+});
+
 app.use(express.json());
 
 // PayPal Live Configuration
-const paypalClientId = process.env.VITE_PAYPAL_CLIENT_ID || "";
-const paypalSecretKey = process.env.VITE_PAYPAL_SECRET_KEY || "";
+const paypalClientId = process.env.PAYPAL_CLIENT_ID || "";
+const paypalSecretKey = process.env.PAYPAL_SECRET_KEY || "";
 
-// Validate that we have the required credentials
+// Validate credentials
 if (!paypalClientId || !paypalSecretKey) {
-  logger.error("Missing PayPal credentials. Please check your environment variables.");
+  logger.error("Missing PayPal credentials", {
+    hasClientId: !!paypalClientId,
+    hasSecretKey: !!paypalSecretKey
+  });
+} else {
+  logger.info("PayPal credentials loaded successfully");
 }
 
 // Configure PayPal LIVE environment
@@ -35,7 +67,8 @@ app.get("/", (req, res) => {
     message: "Mo's Wears PayPal Live API is running", 
     environment: "LIVE",
     website: WEBSITE_URL,
-    status: "Ready to process real payments"
+    status: "Ready to process real payments",
+    cors: "Enabled for all origins"
   });
 });
 
@@ -47,7 +80,6 @@ app.post("/create-paypal-order", async (req, res) => {
       currency = "USD",
       items = [],
       description = "Purchase from Mo's Wears",
-      customerEmail,
       shippingAddress
     } = req.body;
 
@@ -85,14 +117,14 @@ app.post("/create-paypal-order", async (req, res) => {
     if (shippingAddress) {
       purchaseUnit.shipping = {
         name: {
-          full_name: shippingAddress.fullName || ""
+          full_name: shippingAddress.fullName || shippingAddress.name || ""
         },
         address: {
-          address_line_1: shippingAddress.addressLine1 || "",
+          address_line_1: shippingAddress.addressLine1 || shippingAddress.street || "",
           address_line_2: shippingAddress.addressLine2 || "",
           admin_area_2: shippingAddress.city || "",
           admin_area_1: shippingAddress.state || "",
-          postal_code: shippingAddress.postalCode || "",
+          postal_code: shippingAddress.postalCode || shippingAddress.zipCode || "",
           country_code: shippingAddress.countryCode || "US"
         }
       };
@@ -141,7 +173,7 @@ app.post("/create-paypal-order", async (req, res) => {
 // Capture PayPal order
 app.post("/capture-paypal-order", async (req, res) => {
   try {
-    const { orderId, orderData } = req.body;
+    const { orderId } = req.body;
 
     if (!orderId) {
       return res.status(400).json({ 
@@ -236,7 +268,7 @@ app.get("/paypal-order/:orderId", async (req, res) => {
 
 // Verify PayPal configuration
 app.get("/paypal-config", (req, res) => {
-  const config = {
+  const configInfo = {
     environment: "LIVE",
     clientId: paypalClientId ? `${paypalClientId.substring(0, 10)}...` : "Not set",
     hasSecretKey: !!paypalSecretKey,
@@ -247,18 +279,18 @@ app.get("/paypal-config", (req, res) => {
   res.status(200).json({
     success: true,
     message: "PayPal Live Configuration",
-    config
+    config: configInfo
   });
 });
 
-// Payment success callback (for redirects)
-app.get("/payment-success", (req, res) => {
-  res.redirect(`${WEBSITE_URL}/payment-success?${new URLSearchParams(req.query)}`);
-});
-
-// Payment cancelled callback (for redirects)
-app.get("/payment-cancelled", (req, res) => {
-  res.redirect(`${WEBSITE_URL}/payment-cancelled?${new URLSearchParams(req.query)}`);
+// Test endpoint to verify CORS is working
+app.get("/test-cors", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "CORS is working!",
+    timestamp: new Date().toISOString(),
+    origin: req.headers.origin
+  });
 });
 
 export const api = onRequest(app);

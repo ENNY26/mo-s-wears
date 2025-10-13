@@ -8,17 +8,24 @@ async function safeJson(resp) {
 
 export const createOrderOnServer = async (totalAmount) => {
   const url = FUNCTIONS_BASE
-    ? `${FUNCTIONS_BASE.replace(/\/$/, "")}/api/create-paypal-order`  // ✅ Updated endpoint
-    : `/api/create-paypal-order`;  // ✅ Updated endpoint
+    ? `${FUNCTIONS_BASE.replace(/\/$/, "")}/api/create-paypal-order`
+    : `/api/create-paypal-order`;
+
+  console.log("Creating order with URL:", url, "Amount:", totalAmount);
 
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
     body: JSON.stringify({ 
-      amount: totalAmount.toString(),  // ✅ Changed from 'total' to 'amount'
+      amount: totalAmount.toString(),
       currency: "USD"
     })
   });
+
+  console.log("Create order response status:", res.status);
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
@@ -26,24 +33,40 @@ export const createOrderOnServer = async (totalAmount) => {
   }
 
   const data = await safeJson(res);
-  return data?.orderId;  // ✅ Changed from data.id to data.orderId
+  console.log("Create order response data:", data);
+  
+  if (!data || !data.orderId) {
+    throw new Error("Invalid response from server: missing orderId");
+  }
+  
+  return data.orderId;
 };
 
 export const captureOrderOnServer = async (orderId) => {
   const url = FUNCTIONS_BASE
-    ? `${FUNCTIONS_BASE.replace(/\/$/, "")}/api/capture-paypal-order`  // ✅ Updated endpoint
-    : `/api/capture-paypal-order`;  // ✅ Updated endpoint
+    ? `${FUNCTIONS_BASE.replace(/\/$/, "")}/api/capture-paypal-order`
+    : `/api/capture-paypal-order`;
+
+  console.log("Capturing order:", orderId);
 
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ orderId })  // ✅ Send as JSON body instead of URL param
+    headers: { 
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    body: JSON.stringify({ orderId })
   });
+
+  console.log("Capture order response status:", res.status);
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new Error(`Server capture failed: ${res.status} ${res.statusText} ${body}`);
   }
 
-  return await safeJson(res);
+  const data = await safeJson(res);
+  console.log("Capture order response data:", data);
+  
+  return data;
 };
