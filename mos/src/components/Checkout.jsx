@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import PayPalButton from './PayPalButton';
 import { toast } from 'react-toastify';
-
+import StripeCheckout from './StripeCheckoutButton';
 const Checkout = () => {
   const { cart, getCartTotal, clearCart } = useCart();
   const { userProfile, getDefaultAddress } = useUser();
@@ -215,6 +215,27 @@ const Checkout = () => {
             </div>
 
             {/* PayPal Button */}
+
+            {/* Stripe Button */}
+{selectedPayment === "stripe" && shippingAddress && (
+  <div className="mb-6">
+    <div className="border-t pt-4 mt-4">
+      <StripeCheckout
+        items={cart.items}
+        total={total}
+        user={user}
+        shippingAddress={shippingAddress}
+      />
+      {processing && (
+        <div className="text-center mt-4">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-black mx-auto"></div>
+          <p className="text-sm text-gray-600 mt-2">Processing payment...</p>
+        </div>
+      )}
+    </div>
+  </div>
+)}
+
             {selectedPayment === 'paypal' && shippingAddress && (
               <div className="mb-6">
                 <div className="border-t pt-4 mt-4">
@@ -232,7 +253,39 @@ const Checkout = () => {
                 </div>
               </div>
             )}
-          </div>
+          </div><div className="space-y-3">
+  {/* PayPal Option */}
+  <label className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:border-black transition-colors duration-200">
+    <input
+      type="radio"
+      name="payment"
+      value="paypal"
+      checked={selectedPayment === 'paypal'}
+      onChange={(e) => setSelectedPayment(e.target.value)}
+      className="text-black focus:ring-black"
+    />
+    <div className="ml-3">
+      <span className="font-medium">PayPal</span>
+      <p className="text-sm text-gray-600">Pay with your PayPal account</p>
+    </div>
+  </label>
+
+  {/* Stripe Option */}
+  <label className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:border-black transition-colors duration-200">
+    <input
+      type="radio"
+      name="payment"
+      value="stripe"
+      checked={selectedPayment === 'stripe'}
+      onChange={(e) => setSelectedPayment(e.target.value)}
+      className="text-black focus:ring-black"
+    />
+    <div className="ml-3">
+      <span className="font-medium">Stripe</span>
+      <p className="text-sm text-gray-600">Pay securely with card using Stripe</p>
+    </div>
+  </label>
+</div>
 
           {/* Order Summary */}
           <div className="bg-white rounded-lg shadow-lg p-6 h-fit">

@@ -17,6 +17,8 @@
     "@paypal/paypal-server-sdk": "^1.1.0",
     "@paypal/react-paypal-js": "^8.9.2",
     "@square/web-sdk": "^2.1.0",
+    "@stripe/react-stripe-js": "^5.2.0",
+    "@stripe/stripe-js": "^8.0.0",
     "@tailwindcss/postcss": "^4.1.13",
     "axios": "^1.12.2",
     "cors": "^2.8.5",

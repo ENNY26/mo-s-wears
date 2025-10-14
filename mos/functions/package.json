@@ -20,7 +20,8 @@
     "firebase-admin": "^12.7.0",
     "firebase-functions": "^6.5.0",
     "node-fetch": "^3.3.2",
-    "paypal-rest-sdk": "^1.8.1"
+    "paypal-rest-sdk": "^1.8.1",
+    "stripe": "^19.1.0"
   },
   "devDependencies": {
     "firebase-functions-test": "^3.1.0"
