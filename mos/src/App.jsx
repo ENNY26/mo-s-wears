@@ -17,8 +17,13 @@ import EditProduct from "./admin/EditProduct";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { UserProvider } from "./context/UserContext";
-import { PaymentProvider } from './context/PaymentContext';
+import { PaymentProvider } from './pages/PaymentContext';
 import Checkout from "./components/Checkout";
+import PaymentSuccess from "./pages/PaymentSuccess";
+
+// Inside your <Routes>
+<Route path="/payment-success" element={<PaymentSuccess />} />
+
 // Navigation Component
 function Navigation() {
   const { user, logout } = useAuth();
@@ -182,6 +187,7 @@ function App() {
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/orders" element={<Orders />} />
                   <Route path="/addresses" element={<Addresses />} />
+                  <Route path="/payment-success" element={<PaymentSuccess />} />
                   
                   {/* Admin Routes */}
                   <Route path="/admin" element={<ProtectedAdminRoute><AdminPage /></ProtectedAdminRoute>} />

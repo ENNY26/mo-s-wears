@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useCart } from "../context/CartContext";
 import { useUser } from "../context/UserContext";
-import { usePayment } from "../context/PaymentContext";
+import { usePayment } from "../pages/PaymentContext";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import PayPalButton from "./PayPalButton";

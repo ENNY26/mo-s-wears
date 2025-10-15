@@ -1,8 +1,8 @@
 // src/context/PaymentContext.js
 import React, { createContext, useContext, useState } from "react";
-import { useCart } from "./CartContext";
-import { useUser } from "./UserContext";
-import { useAuth } from "./AuthContext";
+import { useCart } from "../context/CartContext";
+import { useUser } from "../context/UserContext";
+import { useAuth } from "../context/AuthContext";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 import { toast } from "react-toastify";
