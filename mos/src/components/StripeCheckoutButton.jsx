@@ -56,7 +56,7 @@ const StripeCheckoutButton = ({ items, total, user, shippingAddress }) => {
       }
 
       // Redirect to Stripe Checkout
-      const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+      const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
       if (!stripe) {
         throw new Error("Stripe failed to load");
       }

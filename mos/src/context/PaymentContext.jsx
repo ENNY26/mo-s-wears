@@ -29,7 +29,7 @@ export const PaymentProvider = ({ children }) => {
         items: cart.items,
         total: getCartTotal(),
         tax: getCartTotal() * 0.1,
-        shipping: 5.99,
+        shipping: .99,
         shippingAddress: paymentData.shippingAddress || getDefaultAddress(),
         billingAddress: paymentData.billingAddress || getDefaultAddress(),
         paymentMethod,
@@ -99,9 +99,8 @@ export const PaymentProvider = ({ children }) => {
 
       if (!session.id) throw new Error("Invalid Stripe session response");
 
-      const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-      const { error } = await stripe.redirectToCheckout({ sessionId: session.id });
-
+      const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+      const { error } = window.location.href = session.url;
       if (error) throw new Error(error.message);
 
       return { success: true };
