@@ -17,7 +17,7 @@ import EditProduct from "./admin/EditProduct";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { UserProvider } from "./context/UserContext";
-import { PaymentProvider } from './pages/PaymentContext';
+import { PaymentProvider } from './context/PaymentContext';
 import Checkout from "./components/Checkout";
 import PaymentSuccess from "./pages/PaymentSuccess";
 
