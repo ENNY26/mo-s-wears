@@ -23,7 +23,7 @@ const stripe = new Stripe(
 );
 
 // Website URL for redirects
-const WEBSITE_URL = "https://themosclothing.com/";
+const WEBSITE_URL = "https://themosclothing.com";
 
 // Health check endpoint
 app.get("/", (req, res) => {
