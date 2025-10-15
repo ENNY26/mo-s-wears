@@ -7,6 +7,8 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 import { toast } from "react-toastify";
 import { createOrderOnServer, captureOrderOnServer } from "../utils/payPalApi";
+import { createStripeSessionOnServer } from "../utils/stripeApi";
+import { loadStripe } from "@stripe/stripe-js";
 
 const PaymentContext = createContext();
 
@@ -16,9 +18,9 @@ export const PaymentProvider = ({ children }) => {
   const { user } = useAuth();
   const [processingPayment, setProcessingPayment] = useState(false);
 
-  const firebaseBase =
-    "https://us-central1-mo-s-wears.cloudfunctions.net/api/create-paypal-order"; // 👈 Replace YOUR_PROJECT_ID
-
+  // ==========================
+  // ✅ Create Firestore Order
+  // ==========================
   const createOrderRecord = async (paymentData, paymentMethod) => {
     try {
       const orderData = {
@@ -53,19 +55,19 @@ export const PaymentProvider = ({ children }) => {
     }
   };
 
+  // ==========================
+  // ✅ PayPal Payment Process
+  // ==========================
   const processPayPalPayment = async () => {
     setProcessingPayment(true);
     try {
-      // create order on server (returns PayPal order id)
       const orderID = await createOrderOnServer(getCartTotal());
-
-      // capture on server (preferred)
       const captureData = await captureOrderOnServer(orderID);
 
-      if (captureData.status === "COMPLETED" || captureData.status === "COMPLETED") {
+      if (captureData.status === "COMPLETED") {
         const orderId = await createOrderRecord({ paymentId: captureData.id }, "paypal");
         clearCart();
-        toast.success("Payment successful! Order placed.");
+        toast.success("PayPal payment successful! Order placed.");
         return { success: true, orderId };
       } else {
         throw new Error("PayPal payment not completed");
@@ -79,11 +81,48 @@ export const PaymentProvider = ({ children }) => {
     }
   };
 
+  // ==========================
+  // ✅ Stripe Payment Process
+  // ==========================
+  const processStripePayment = async (shippingAddress) => {
+    setProcessingPayment(true);
+    try {
+      const items = cart.items.map((item) => ({
+        title: item.title,
+        price: item.price,
+        quantity: item.quantity,
+        imageUrls: item.imageUrls || [],
+      }));
+
+      const total = getCartTotal();
+      const session = await createStripeSessionOnServer(items, total, user, shippingAddress);
+
+      if (!session.id) throw new Error("Invalid Stripe session response");
+
+      const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+      const { error } = await stripe.redirectToCheckout({ sessionId: session.id });
+
+      if (error) throw new Error(error.message);
+
+      return { success: true };
+    } catch (error) {
+      console.error("Stripe payment error:", error);
+      toast.error("Stripe checkout failed");
+      return { success: false, error: error.message };
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
+  // ==========================
+  // ✅ Context Provider
+  // ==========================
   return (
     <PaymentContext.Provider
       value={{
         processingPayment,
         processPayPalPayment,
+        processStripePayment, // 👈 Added Stripe here
         createOrderRecord,
       }}
     >
@@ -92,6 +131,7 @@ export const PaymentProvider = ({ children }) => {
   );
 };
 
+// Hook to use in components
 export const usePayment = () => {
   const context = useContext(PaymentContext);
   if (!context) {
