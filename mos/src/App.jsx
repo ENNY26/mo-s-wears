@@ -20,6 +20,7 @@ import { UserProvider } from "./context/UserContext";
 import { PaymentProvider } from './context/PaymentContext';
 import Checkout from "./components/Checkout";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentCancelled from "./pages/PaymentCancelled";
 
 // Inside your <Routes>
 <Route path="/payment-success" element={<PaymentSuccess />} />
@@ -188,6 +189,8 @@ function App() {
                   <Route path="/orders" element={<Orders />} />
                   <Route path="/addresses" element={<Addresses />} />
                   <Route path="/payment-success" element={<PaymentSuccess />} />
+                  <Route path="/payment-cancelled" element={<PaymentCancelled />} />
+
                   
                   {/* Admin Routes */}
                   <Route path="/admin" element={<ProtectedAdminRoute><AdminPage /></ProtectedAdminRoute>} />

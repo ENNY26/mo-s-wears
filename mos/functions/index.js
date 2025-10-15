@@ -23,7 +23,10 @@ const stripe = new Stripe(
 );
 
 // Website URL for redirects
-const WEBSITE_URL = "https://themosclothing.com";
+const WEBSITE_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://themosclothing.com"
+    : "http://localhost:5173";
 
 // Health check endpoint
 app.get("/", (req, res) => {
