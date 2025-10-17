@@ -33,83 +33,52 @@ const ProductCard = ({ product }) => {
   };
 
   return (
-    <>
-      <div className="group relative bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300">
-        {/* Admin Edit Button */}
-        {user?.email === "danalysis856@gmail.com" && (
-          <div className="absolute top-3 left-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <Link
-              to={`/admin/edit-product/${product.id}`}
-              className="bg-blue-500 text-white p-1 rounded-full hover:bg-blue-600 transition-colors duration-200"
-              title="Edit Product"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-            </Link>
-          </div>
-        )}
+    <div className="product-card">
+      <Link to={`/product/${product.id}`}>
+        <img
+          src={product.imageUrls?.[0] || "/placeholder.png"}
+          alt={product.title}
+          className="w-full h-70 object-cover group-hover:scale-105 transition-transform duration-500"
+          onError={(e) => {
+            e.target.src = "/placeholder-image.jpg";
+          }}
+        />
+        <h3 className="font-medium text-gray-900 mb-1 line-clamp-2">{product.title}</h3>
+      </Link>
 
-        {/* Product Image */}
-        <div className="relative overflow-hidden">
-          <img
-            src={product.imageUrls?.[selectedImage] || "/placeholder-image.jpg"}
-            alt={product.title}
-            className="w-full h-70 object-cover group-hover:scale-105 transition-transform duration-500"
-            onError={(e) => {
-              e.target.src = "/placeholder-image.jpg";
-            }}
-          />
-
-          {/* Image Thumbnails */}
-          {product.imageUrls && product.imageUrls.length > 1 && (
-            <div className="absolute bottom-2 left-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              {product.imageUrls.slice(0, 3).map((url, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedImage(index)}
-                  className={`w-8 h-8 border-2 ${selectedImage === index ? "border-black" : "border-white"}`}
-                >
-                  <img
-                    src={url}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Quick Add Button */}
-          <button
-            onClick={quickAdd}
-            className="absolute top-3 right-3 bg-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black hover:text-white shadow-lg"
+      {/* Admin Edit Button */}
+      {user?.email === "danalysis856@gmail.com" && (
+        <div className="absolute top-3 left-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <Link
+            to={`/admin/edit-product/${product.id}`}
+            className="bg-blue-500 text-white p-1 rounded-full hover:bg-blue-600 transition-colors duration-200"
+            title="Edit Product"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
-          </button>
-
-          {/* Multiple Images Indicator */}
-          {product.imageUrls && product.imageUrls.length > 1 && (
-            <div className="absolute top-3 left-12 bg-black bg-opacity-70 text-white px-2 py-1 rounded-full text-xs">
-              {product.imageUrls.length} photos
-            </div>
-          )}
+          </Link>
         </div>
+      )}
 
-        {/* Product Info */}
-        <div className="p-4">
-          <h3 className="font-medium text-gray-900 mb-1 line-clamp-2">{product.title}</h3>
-          <p className="text-gray-600 text-sm mb-2 line-clamp-2">{product.description}</p>
-          <div className="flex items-center justify-between">
-            <span className="text-lg font-semibold text-gray-900">${product.price?.toFixed(2)}</span>
-            <span className="text-xs text-gray-500 uppercase">{product.category}</span>
-          </div>
+      {/* Quick Add Button */}
+      <button
+        onClick={quickAdd}
+        className="absolute top-3 right-3 bg-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black hover:text-white shadow-lg"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+      </button>
+
+      {/* Multiple Images Indicator */}
+      {product.imageUrls && product.imageUrls.length > 1 && (
+        <div className="absolute top-3 left-12 bg-black bg-opacity-70 text-white px-2 py-1 rounded-full text-xs">
+          {product.imageUrls.length} photos
         </div>
-      </div>
+      )}
 
       {/* Size Selection Modal */}
       {showSizeModal && (
@@ -136,7 +105,7 @@ const ProductCard = ({ product }) => {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 };
 
