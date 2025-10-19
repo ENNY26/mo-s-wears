@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { db } from "../firebase/firebaseConfig";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
@@ -6,113 +6,77 @@ import { toast } from "react-toastify";
 
 const storage = getStorage(); // uses firebaseConfig project
 
-async function uploadFilesAndGetUrls(files) {
-  const urls = [];
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const fname = `${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
-    const sRef = storageRef(storage, `products/${fname}`);
-    const uploadTask = uploadBytesResumable(sRef, file);
-    // wait for completion
-    await new Promise((resolve, reject) => {
-      uploadTask.on(
-        "state_changed",
-        null,
-        (err) => reject(err),
-        async () => {
-          const url = await getDownloadURL(uploadTask.snapshot.ref);
-          urls.push(url);
-          resolve();
-        }
-      );
-    });
-  }
-  return urls;
-}
-
-const AddProduct = () => {
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    price: "",
-    category: "",
-    sizes: [],
-  });
-  const [images, setImages] = useState([]);
+export default function AddProduct() {
+  const [title, setTitle] = useState("");
+  const [price, setPrice] = useState("");
+  const [files, setFiles] = useState([]);
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [sizes, setSizes] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const categories = ["Dress", "Shirts", "Pants", "Jackets", "Shoes", "Accessories"];
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
-  };
+  const uploadFilesAndGetUrls = async (fileList) => {
+    const urls = [];
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      const name = `products/${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
+      const ref = storageRef(storage, name);
+      const uploadTask = uploadBytesResumable(ref, file);
 
-  const handleSizeChange = (e) => {
-    const { value, checked } = e.target;
-    if (checked) {
-      setForm(prev => ({ ...prev, sizes: [...prev.sizes, value] }));
-    } else {
-      setForm(prev => ({ ...prev, sizes: prev.sizes.filter(s => s !== value) }));
+      await new Promise((resolve, reject) => {
+        uploadTask.on(
+          "state_changed",
+          null,
+          (err) => {
+            console.error("Upload error", err);
+            reject(err);
+          },
+          async () => {
+            try {
+              const url = await getDownloadURL(uploadTask.snapshot.ref);
+              urls.push(url);
+              resolve();
+            } catch (err) {
+              reject(err);
+            }
+          }
+        );
+      });
     }
-  };
-
-  const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length + images.length > 5) {
-      toast.error("Maximum 5 images allowed");
-      return;
-    }
-    setImages(prev => [...prev, ...files]);
-  };
-
-  const removeImage = (index) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const uploadImages = async () => {
-    const uploadPromises = images.map(async (image) => {
-      const imgRef = ref(storage, `products/${Date.now()}_${image.name}`);
-      await uploadBytes(imgRef, image);
-      return await getDownloadURL(imgRef);
-    });
-
-    const imageUrls = await Promise.all(uploadPromises);
-    return imageUrls;
+    return urls;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (images.length === 0) {
-      toast.error("Please upload at least one product image");
-      return;
-    }
-
-    setUploading(true);
-    setUploadProgress(0);
-
     try {
-      const imageUrls = await uploadFilesAndGetUrls(images);
-      setUploadProgress(100);
+      if (!title || !price) return toast.error("Title and price required");
+      const fileArray = Array.from(files || []);
+      const imageUrls = fileArray.length ? await uploadFilesAndGetUrls(fileArray) : [];
 
-      await addDoc(collection(db, "products"), {
-        ...form,
-        price: parseFloat(form.price),
+      const docData = {
+        title,
+        price: Number(price),
         imageUrls,
-        sizes: form.sizes,
         createdAt: serverTimestamp(),
-      });
+        description,
+        category,
+        sizes,
+      };
 
-      toast.success("Product added successfully!");
-      setForm({ title: "", description: "", price: "", category: "", sizes: [] });
-      setImages([]);
-    } catch (error) {
-      console.error("Error adding product:", error);
+      await addDoc(collection(db, "products"), docData);
+      toast.success("Product added");
+      setTitle("");
+      setPrice("");
+      setFiles([]);
+      setDescription("");
+      setCategory("");
+      setSizes([]);
+    } catch (err) {
+      console.error("Add product failed:", err);
       toast.error("Failed to add product");
-    } finally {
-      setUploading(false);
-      setUploadProgress(0);
     }
   };
 
@@ -130,8 +94,8 @@ const AddProduct = () => {
               </label>
               <input
                 name="title"
-                value={form.title}
-                onChange={handleChange}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g., Premium Cotton T-Shirt"
                 required
                 className="w-full border border-gray-300 rounded-md px-3 py-2
@@ -145,8 +109,8 @@ const AddProduct = () => {
               </label>
               <select
                 name="category"
-                value={form.category}
-                onChange={handleChange}
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
                 required
                 className="w-full border border-gray-300 rounded-md px-3 py-2
                  focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
@@ -169,8 +133,8 @@ const AddProduct = () => {
               type="number"
               step="0.01"
               min="0"
-              value={form.price}
-              onChange={handleChange}
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
               placeholder="0.00"
               required
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
@@ -184,8 +148,8 @@ const AddProduct = () => {
             </label>
             <textarea
               name="description"
-              value={form.description}
-              onChange={handleChange}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               placeholder="Product description..."
               rows="4"
               required
@@ -204,8 +168,15 @@ const AddProduct = () => {
                   <input
                     type="checkbox"
                     value={size}
-                    checked={form.sizes.includes(size)}
-                    onChange={handleSizeChange}
+                    checked={sizes.includes(size)}
+                    onChange={(e) => {
+                      const { value, checked } = e.target;
+                      if (checked) {
+                        setSizes(prev => [...prev, value]);
+                      } else {
+                        setSizes(prev => prev.filter(s => s !== value));
+                      }
+                    }}
                     className="rounded border-gray-300 text-black focus:ring-black"
                   />
                   <span className="text-sm text-gray-700">{size}</span>
@@ -221,18 +192,20 @@ const AddProduct = () => {
             </label>
 
             {/* Image Preview */}
-            {images.length > 0 && (
+            {files.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
-                {images.map((image, index) => (
+                {Array.from(files).map((file, index) => (
                   <div key={index} className="relative group">
                     <img
-                      src={URL.createObjectURL(image)}
+                      src={URL.createObjectURL(file)}
                       alt={`Preview ${index + 1}`}
                       className="w-full h-32 object-cover rounded-lg"
                     />
                     <button
                       type="button"
-                      onClick={() => removeImage(index)}
+                      onClick={() => {
+                        setFiles(prev => Array.from(prev).filter((_, i) => i !== index));
+                      }}
                       className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                     >
                       ×
@@ -273,7 +246,7 @@ const AddProduct = () => {
                 type="file"
                 multiple
                 accept="image/*"
-                onChange={handleImageUpload}
+                onChange={(e) => setFiles(e.target.files)}
                 className="hidden"
                 disabled={uploading}
               />
@@ -283,7 +256,7 @@ const AddProduct = () => {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={uploading || images.length === 0}
+            disabled={uploading || files.length === 0}
             className="w-full bg-black text-white py-3 px-4 rounded-md font-semibold hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
           >
             {uploading ? "Adding Product..." : "Add Product"}
@@ -292,6 +265,4 @@ const AddProduct = () => {
       </div>
     </div>
   );
-};
-
-export default AddProduct;
+}

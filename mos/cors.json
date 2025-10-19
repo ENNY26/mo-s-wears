@@ -1,0 +1,12 @@
+[
+  {
+    "origin": [
+      "http://localhost:5173",
+      "https://themosclothing.com",
+      "https://mo-s-wears.web.app"
+    ],
+    "method": ["GET", "POST", "PUT", "HEAD", "OPTIONS"],
+    "responseHeader": ["Content-Type", "x-goog-resumable", "Authorization"],
+    "maxAgeSeconds": 3600
+  }
+]
