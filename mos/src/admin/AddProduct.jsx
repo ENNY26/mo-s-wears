@@ -1,8 +1,34 @@
 import { useState } from "react";
-import { db, storage } from "../firebase/firebaseConfig";
+import { db } from "../firebase/firebaseConfig";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { toast } from "react-toastify";
+
+const storage = getStorage(); // uses firebaseConfig project
+
+async function uploadFilesAndGetUrls(files) {
+  const urls = [];
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const fname = `${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
+    const sRef = storageRef(storage, `products/${fname}`);
+    const uploadTask = uploadBytesResumable(sRef, file);
+    // wait for completion
+    await new Promise((resolve, reject) => {
+      uploadTask.on(
+        "state_changed",
+        null,
+        (err) => reject(err),
+        async () => {
+          const url = await getDownloadURL(uploadTask.snapshot.ref);
+          urls.push(url);
+          resolve();
+        }
+      );
+    });
+  }
+  return urls;
+}
 
 const AddProduct = () => {
   const [form, setForm] = useState({
@@ -67,7 +93,7 @@ const AddProduct = () => {
     setUploadProgress(0);
 
     try {
-      const imageUrls = await uploadImages();
+      const imageUrls = await uploadFilesAndGetUrls(images);
       setUploadProgress(100);
 
       await addDoc(collection(db, "products"), {

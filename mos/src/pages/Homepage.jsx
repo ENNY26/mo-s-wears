@@ -1,116 +1,147 @@
-import { useEffect, useState } from "react";
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  getDocs
+} from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 import ProductCard from "../components/ProductCard";
-import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
+import { toast } from "react-toastify";
 
-const Homepage = ({ showAdminTools = false }) => {
+export default function Homepage() {
+  const { addItem } = useCart();
   const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [sortBy, setSortBy] = useState("newest");
-  const { user } = useAuth();
+  const [visibleCount, setVisibleCount] = useState(12); // how many products shown while scrolling
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
+    setLoading(true);
+    setErrorMsg("");
+
     const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
-    const unsub = onSnapshot(q, (snapshot) => {
-      const productsData = snapshot.docs.map(doc => ({ 
-        id: doc.id, 
-        ...doc.data() 
-      }));
-      setProducts(productsData);
-      setFilteredProducts(productsData);
-    });
+
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const items = [];
+        snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
+        setProducts(items);
+        setLoading(false);
+      },
+      async (err) => {
+        console.error("Realtime products listener error:", err);
+        setErrorMsg("Realtime read failed. Trying a one-time fetch...");
+
+        try {
+          const snap = await getDocs(q);
+          const items = [];
+          snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
+          setProducts(items);
+        } catch (getErr) {
+          console.error("One-time products fetch failed:", getErr);
+          if (getErr.code === "permission-denied") {
+            setErrorMsg(
+              "Permission denied. Adjust Firestore rules to allow reads on products."
+            );
+          } else {
+            setErrorMsg("Failed to load products. See console for details.");
+          }
+        } finally {
+          setLoading(false);
+        }
+      }
+    );
+
     return () => unsub();
   }, []);
 
-  useEffect(() => {
-    let filtered = products;
-    
-    // Filter by category
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter(product => product.category === selectedCategory);
+  const handleAddToCart = (product) => {
+    try {
+      addItem({
+        id: product.id,
+        title: product.title,
+        price: product.price,
+        quantity: 1,
+        imageUrls: product.imageUrls || []
+      });
+      toast.success("Added to cart");
+    } catch (err) {
+      console.error("Add to cart error:", err);
+      toast.error("Could not add to cart");
     }
-    
-    // Sort products
-    switch (sortBy) {
-      case "price-low":
-        filtered = [...filtered].sort((a, b) => a.price - b.price);
-        break;
-      case "price-high":
-        filtered = [...filtered].sort((a, b) => b.price - a.price);
-        break;
-      case "newest":
-        filtered = [...filtered].sort((a, b) => b.createdAt - a.createdAt);
-        break;
-      default:
-        break;
-    }
-    
-    setFilteredProducts(filtered);
-  }, [products, selectedCategory, sortBy]);
+  };
 
-  const categories = ["all", ...new Set(products.map(p => p.category).filter(Boolean))];
+  const handleLoadMore = () => setVisibleCount((c) => c + 12);
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div>Loading products...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {showAdminTools ? "All Products" : "New Collection"}
-              </h1>
-              <p className="text-gray-600 mt-2">
-                Discover our latest arrivals and timeless classics
-              </p>
-            </div>
-            
-            {/* Filters */}
-            <div className="flex flex-wrap gap-4 mt-4 sm:mt-0">
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
-              >
-                {categories.map(category => (
-                  <option key={category} value={category}>
-                    {category === "all" ? "All Categories" : category}
-                  </option>
-                ))}
-              </select>
-              
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
-              >
-                <option value="newest">Newest</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-              </select>
-            </div>
-          </div>
+    <div className="container mx-auto p-4">
+      {errorMsg && (
+        <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded">
+          {errorMsg}
         </div>
-      </div>
+      )}
 
-      {/* Products Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {filteredProducts.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No products found.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
+      {products.length === 0 ? (
+        <div className="text-center text-gray-500 mt-10">
+          No products available right now.
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {products.slice(0, visibleCount).map((product) => (
+              <div key={product.id} className="border rounded overflow-hidden relative">
+                {/* clickable area: image + title */}
+                <Link to={`/product/${product.id}`} className="block p-3 hover:bg-gray-50">
+                  <ProductCard product={product} compact />
+                </Link>
+
+                {/* inline controls for quick add while scrolling */}
+                <div className="p-3 flex items-center justify-between border-t bg-white">
+                  <div className="text-sm font-medium">${product.price}</div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleAddToCart(product)}
+                      className="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700"
+                    >
+                      Add to cart
+                    </button>
+                    <Link
+                      to={`/product/${product.id}`}
+                      className="text-xs text-gray-600 underline"
+                    >
+                      View
+                    </Link>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
-        )}
-      </div>
+
+          {visibleCount < products.length && (
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={handleLoadMore}
+                className="px-6 py-2 bg-gray-200 rounded hover:bg-gray-300"
+              >
+                Load more
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
-};
-
-export default Homepage;
+}
