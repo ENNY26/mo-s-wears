@@ -1,10 +1,41 @@
 import React, { useState } from "react";
-import { db } from "../firebase/firebaseConfig";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { db } from "../firebase/firebaseConfig";
 import { toast } from "react-toastify";
 
-const storage = getStorage(); // uses firebaseConfig project
+const storage = getStorage();
+
+async function uploadFilesAndGetUrls(fileList) {
+  const urls = [];
+  for (let i = 0; i < fileList.length; i++) {
+    const file = fileList[i];
+    const path = `products/${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
+    const ref = storageRef(storage, path);
+    const task = uploadBytesResumable(ref, file);
+
+    await new Promise((resolve, reject) => {
+      task.on(
+        "state_changed",
+        null,
+        (err) => {
+          console.error("Upload error", err);
+          reject(err);
+        },
+        async () => {
+          try {
+            const url = await getDownloadURL(task.snapshot.ref);
+            urls.push(url);
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        }
+      );
+    });
+  }
+  return urls;
+}
 
 export default function AddProduct() {
   const [title, setTitle] = useState("");
@@ -18,43 +49,12 @@ export default function AddProduct() {
 
   const categories = ["Dress", "Shirts", "Pants", "Jackets", "Shoes", "Accessories"];
 
-  const uploadFilesAndGetUrls = async (fileList) => {
-    const urls = [];
-    for (let i = 0; i < fileList.length; i++) {
-      const file = fileList[i];
-      const name = `products/${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
-      const ref = storageRef(storage, name);
-      const uploadTask = uploadBytesResumable(ref, file);
-
-      await new Promise((resolve, reject) => {
-        uploadTask.on(
-          "state_changed",
-          null,
-          (err) => {
-            console.error("Upload error", err);
-            reject(err);
-          },
-          async () => {
-            try {
-              const url = await getDownloadURL(uploadTask.snapshot.ref);
-              urls.push(url);
-              resolve();
-            } catch (err) {
-              reject(err);
-            }
-          }
-        );
-      });
-    }
-    return urls;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       if (!title || !price) return toast.error("Title and price required");
-      const fileArray = Array.from(files || []);
-      const imageUrls = fileArray.length ? await uploadFilesAndGetUrls(fileArray) : [];
+      const filesArray = Array.from(files || []);
+      const imageUrls = filesArray.length ? await uploadFilesAndGetUrls(filesArray) : [];
 
       const docData = {
         title,
