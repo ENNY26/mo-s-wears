@@ -47,7 +47,7 @@ export default function AddProduct() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  const categories = ["Dress", "Shirts", "Pants", "Jackets", "Shoes", "Accessories"];
+  const categories = ["Dress", "2-piece", "Children Collection", "Jackets", "Shoes", "Accessories"];
 
   const handleSubmit = async (e) => {
     e.preventDefault();

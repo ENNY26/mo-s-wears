@@ -21,7 +21,7 @@ const EditProduct = () => {
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const categories = ["T-Shirts", "Shirts", "Pants", "Jackets", "Shoes", "Accessories"];
+  const categories = ["Dress","2-piece", "Children Collection", "Pants", "Jackets", "Shoes", "Accessories"];
 
   useEffect(() => {
     const fetchProduct = async () => {
