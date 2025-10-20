@@ -26,7 +26,7 @@ const Checkout = () => {
   const subtotal =
     typeof getCartTotal === "function" ? getCartTotal() : items.reduce((s, i) => s + (i.price || 0) * (i.quantity || 0), 0);
   const tax = subtotal * 0.1;
-  const shipping = .19;
+  const shipping = .9;
   const total = subtotal + tax + shipping;
 
   // ==========================
