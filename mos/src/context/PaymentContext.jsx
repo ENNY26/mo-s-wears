@@ -13,10 +13,16 @@ import { loadStripe } from "@stripe/stripe-js";
 const PaymentContext = createContext();
 
 export const PaymentProvider = ({ children }) => {
-  const { cart, getCartTotal, clearCart } = useCart();
-  const { userProfile, addOrder, getDefaultAddress } = useUser();
-  const { user } = useAuth();
+  const { cart, getCartTotal, clearCart } = useCart() || {};
+  const { userProfile, addOrder, getDefaultAddress } = useUser() || {};
+  const { user } = useAuth() || {};
   const [processingPayment, setProcessingPayment] = useState(false);
+
+  // normalize items and total
+  const items = Array.isArray(cart) ? cart : Array.isArray(cart?.items) ? cart.items : [];
+  const total = typeof getCartTotal === "function"
+    ? getCartTotal()
+    : items.reduce((s, i) => s + (i.price || 0) * (i.quantity || 0), 0);
 
   // ==========================
   // ✅ Create Firestore Order
@@ -24,14 +30,14 @@ export const PaymentProvider = ({ children }) => {
   const createOrderRecord = async (paymentData, paymentMethod) => {
     try {
       const orderData = {
-        userId: user.uid,
-        userEmail: user.email,
-        items: cart.items,
-        total: getCartTotal(),
-        tax: getCartTotal() * 0.1,
-        shipping: .99,
-        shippingAddress: paymentData.shippingAddress || getDefaultAddress(),
-        billingAddress: paymentData.billingAddress || getDefaultAddress(),
+        userId: user?.uid || null,
+        userEmail: user?.email || null,
+        items: items,
+        total: total,
+        tax: total * 0.1,
+        shipping: 0.99,
+        shippingAddress: paymentData.shippingAddress || (typeof getDefaultAddress === "function" ? getDefaultAddress() : null),
+        billingAddress: paymentData.billingAddress || (typeof getDefaultAddress === "function" ? getDefaultAddress() : null),
         paymentMethod,
         paymentId: paymentData.paymentId,
         status: "placed",
@@ -47,7 +53,9 @@ export const PaymentProvider = ({ children }) => {
       };
 
       const orderRef = await addDoc(collection(db, "orders"), orderData);
-      await addOrder({ ...orderData, id: orderRef.id });
+      if (typeof addOrder === "function") {
+        await addOrder({ ...orderData, id: orderRef.id });
+      }
       return orderRef.id;
     } catch (error) {
       console.error("Error creating order record:", error);
@@ -58,15 +66,15 @@ export const PaymentProvider = ({ children }) => {
   // ==========================
   // ✅ PayPal Payment Process
   // ==========================
-  const processPayPalPayment = async () => {
+  const processPayPalPayment = async (extra = {}) => {
     setProcessingPayment(true);
     try {
-      const orderID = await createOrderOnServer(getCartTotal());
+      const orderID = await createOrderOnServer(total);
       const captureData = await captureOrderOnServer(orderID);
 
       if (captureData.status === "COMPLETED") {
-        const orderId = await createOrderRecord({ paymentId: captureData.id }, "paypal");
-        clearCart();
+        const orderId = await createOrderRecord({ paymentId: captureData.id, ...extra }, "paypal");
+        if (typeof clearCart === "function") clearCart();
         toast.success("PayPal payment successful! Order placed.");
         return { success: true, orderId };
       } else {
@@ -87,21 +95,29 @@ export const PaymentProvider = ({ children }) => {
   const processStripePayment = async (shippingAddress) => {
     setProcessingPayment(true);
     try {
-      const items = cart.items.map((item) => ({
+      if (!items || items.length === 0) throw new Error("Cart is empty");
+      const stripeItems = items.map((item) => ({
         title: item.title,
         price: item.price,
         quantity: item.quantity,
         imageUrls: item.imageUrls || [],
       }));
 
-      const total = getCartTotal();
-      const session = await createStripeSessionOnServer(items, total, user, shippingAddress);
+      const session = await createStripeSessionOnServer(stripeItems, total, user, shippingAddress);
 
-      if (!session.id) throw new Error("Invalid Stripe session response");
+      if (!session || !session.id) throw new Error("Invalid Stripe session response");
+
+      // redirect to session.url if provided, otherwise use Stripe redirectToCheckout
+      if (session.url) {
+        window.location.href = session.url;
+        return { success: true };
+      }
 
       const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
-      const { error } = window.location.href = session.url;
-      if (error) throw new Error(error.message);
+      if (!stripe) throw new Error("Stripe failed to load");
+
+      const { error } = await stripe.redirectToCheckout({ sessionId: session.id });
+      if (error) throw error;
 
       return { success: true };
     } catch (error) {
@@ -121,7 +137,7 @@ export const PaymentProvider = ({ children }) => {
       value={{
         processingPayment,
         processPayPalPayment,
-        processStripePayment, // 👈 Added Stripe here
+        processStripePayment,
         createOrderRecord,
       }}
     >

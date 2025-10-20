@@ -1,12 +1,22 @@
 // components/Cart.jsx
+import React from "react";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useUser } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
-const Cart = () => {
-  const { cart, updateQuantity, removeFromCart, getCartTotal, clearCart } = useCart();
+export default function Cart() {
+  const {
+    cart, // may be undefined if provider missing — guard below
+    updateQuantity,
+    removeItem,
+    clearCart,
+    getCartTotal,
+  } = useCart() || {};
+
+  const items = Array.isArray(cart) ? cart : [];
+
   const { user } = useAuth();
   const { userProfile } = useUser();
   const navigate = useNavigate();
@@ -57,7 +67,7 @@ const Cart = () => {
     );
   }
 
-  if (cart.items.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -85,7 +95,7 @@ const Cart = () => {
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex justify-between items-center">
               <h1 className="text-2xl font-bold text-gray-900">
-                Shopping Cart ({cart.items.length} {cart.items.length === 1 ? 'item' : 'items'})
+                Shopping Cart ({items.length} {items.length === 1 ? 'item' : 'items'})
               </h1>
               <button
                 onClick={clearCart}
@@ -99,7 +109,7 @@ const Cart = () => {
           <div className="p-6">
             {/* Cart Items */}
             <div className="space-y-6">
-              {cart.items.map((item) => (
+              {items.map((item) => (
                 <div key={`${item.id}-${item.selectedSize}`} className="flex items-center space-x-6 py-4 border-b border-gray-100 last:border-b-0">
                   {/* Product Image */}
                   <img
@@ -149,7 +159,7 @@ const Cart = () => {
 
                     {/* Remove Button */}
                     <button
-                      onClick={() => removeFromCart(item.id, item.selectedSize)}
+                      onClick={() => removeItem(item.id)}
                       className="text-red-500 hover:text-red-700 transition-colors duration-200 p-2"
                       title="Remove item"
                     >
@@ -239,5 +249,3 @@ const Cart = () => {
     </div>
   );
 };
-
-export default Cart;

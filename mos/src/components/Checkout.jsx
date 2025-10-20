@@ -8,11 +8,14 @@ import PayPalButton from "./PayPalButton";
 import { toast } from "react-toastify";
 
 const Checkout = () => {
-  const { cart, getCartTotal, clearCart } = useCart();
-  const { userProfile, getDefaultAddress } = useUser();
-  const { processPayPalPayment, processStripePayment } = usePayment(); // ✅ Added Stripe
-  const { user } = useAuth();
+  const { cart, getCartTotal, clearCart } = useCart() || {};
+  const { userProfile, getDefaultAddress } = useUser() || {};
+  const { processPayPalPayment, processStripePayment } = usePayment() || {};
+  const { user } = useAuth() || {};
   const navigate = useNavigate();
+
+  // normalize cart items (handle either cart array or { items: [] } shape)
+  const items = Array.isArray(cart) ? cart : Array.isArray(cart?.items) ? cart.items : [];
 
   const [selectedPayment, setSelectedPayment] = useState("");
   const [shippingAddress, setShippingAddress] = useState(null);
@@ -20,7 +23,8 @@ const Checkout = () => {
   const [sameAsShipping, setSameAsShipping] = useState(true);
   const [processing, setProcessing] = useState(false);
 
-  const subtotal = getCartTotal();
+  const subtotal =
+    typeof getCartTotal === "function" ? getCartTotal() : items.reduce((s, i) => s + (i.price || 0) * (i.quantity || 0), 0);
   const tax = subtotal * 0.1;
   const shipping = 5.99;
   const total = subtotal + tax + shipping;
@@ -35,18 +39,18 @@ const Checkout = () => {
       return;
     }
 
-    if (cart.items.length === 0) {
+    if (items.length === 0) {
       toast.error("Your cart is empty");
       navigate("/cart");
       return;
     }
 
-    const defaultAddress = getDefaultAddress();
+    const defaultAddress = typeof getDefaultAddress === "function" ? getDefaultAddress() : null;
     if (defaultAddress) {
       setShippingAddress(defaultAddress);
       setBillingAddress(defaultAddress);
     }
-  }, [user, cart, navigate, getDefaultAddress]);
+  }, [user, cart, navigate, getDefaultAddress]); // keep cart in deps to update when provider changes
 
   // ==========================
   // ✅ PayPal Handlers
@@ -128,7 +132,7 @@ const Checkout = () => {
     );
   }
 
-  if (cart.items.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -301,7 +305,7 @@ const Checkout = () => {
           <h3 className="text-lg font-semibold mb-4">Order Summary</h3>
 
           <div className="space-y-4 mb-6">
-            {cart.items.map((item) => (
+            {items.map((item) => (
               <div key={`${item.id}-${item.selectedSize}`} className="flex items-center space-x-4">
                 <img
                   src={item.imageUrls?.[0]}

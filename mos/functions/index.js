@@ -22,11 +22,12 @@ const stripe = new Stripe(
   { apiVersion: "2023-08-16" }
 );
 
-// Website URL for redirects
+// Website URL for redirects - prefer explicit env var
 const WEBSITE_URL =
-  process.env.NODE_ENV === "production"
+  process.env.WEBSITE_URL ||
+  (process.env.NODE_ENV === "production"
     ? "https://themosclothing.com"
-    : "http://localhost:5173";
+    : "http://localhost:5173");
 
 // Health check endpoint
 app.get("/", (req, res) => {
