@@ -23,7 +23,7 @@ export default function Cart() {
 
   const subtotal = getCartTotal();
   const tax = subtotal * 0.1; // 10% tax
-  const shipping = subtotal > 0 ? .9 : 0; // Free shipping over a certain amount?
+  const shipping = subtotal > 0 ? 0.10 : 0; // Free shipping over a certain amount?
   const total = subtotal + tax + shipping;
 
   const handleCheckout = () => {

@@ -35,7 +35,7 @@ export const PaymentProvider = ({ children }) => {
         items: items,
         total: total,
         tax: total * 0.1,
-        shipping: 0.19,
+        shipping: 0.10,
         shippingAddress: paymentData.shippingAddress || (typeof getDefaultAddress === "function" ? getDefaultAddress() : null),
         billingAddress: paymentData.billingAddress || (typeof getDefaultAddress === "function" ? getDefaultAddress() : null),
         paymentMethod,
