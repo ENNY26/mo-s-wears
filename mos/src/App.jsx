@@ -22,6 +22,7 @@ import Checkout from "./components/Checkout";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancelled from "./pages/PaymentCancelled";
 import ProductDetail from "./pages/ProductDetail";
+import Landing from "./pages/Landing";
 
 // Inside your <Routes>
 <Route path="/payment-success" element={<PaymentSuccess />} />
@@ -181,7 +182,8 @@ function App() {
               <Navigation />
               <main>
                 <Routes>
-                  <Route path="/" element={<Home />} />
+                  <Route path="/" element={<Landing />} />
+                  <Route path="/homepage" element={<Home />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
                   <Route path="/cart" element={<Cart />} />

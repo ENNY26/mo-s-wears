@@ -23,7 +23,7 @@ export const PaymentProvider = ({ children }) => {
   const total = typeof getCartTotal === "function"
     ? getCartTotal()
     : items.reduce((s, i) => s + (i.price || 0) * (i.quantity || 0), 0);
-
+ 
   // ==========================
   // ✅ Create Firestore Order
   // ==========================
@@ -34,8 +34,8 @@ export const PaymentProvider = ({ children }) => {
         userEmail: user?.email || null,
         items: items,
         total: total,
-        tax: total * 0.1,
-        shipping: 0.10,
+        tax: 1.99,
+        shipping: total > 100 ? 0 : 7.99,
         shippingAddress: paymentData.shippingAddress || (typeof getDefaultAddress === "function" ? getDefaultAddress() : null),
         billingAddress: paymentData.billingAddress || (typeof getDefaultAddress === "function" ? getDefaultAddress() : null),
         paymentMethod,

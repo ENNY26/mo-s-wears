@@ -25,8 +25,9 @@ const Checkout = () => {
 
   const subtotal =
     typeof getCartTotal === "function" ? getCartTotal() : items.reduce((s, i) => s + (i.price || 0) * (i.quantity || 0), 0);
-  const tax = subtotal * 0.1;
-  const shipping = .10;
+  // Fixed tax and shipping rules:
+  const tax = 1.99; // fixed tax
+  const shipping = subtotal > 100 ? 0 : 7.99; // free shipping for orders over $100
   const total = subtotal + tax + shipping;
 
   // ==========================
@@ -236,7 +237,7 @@ const Checkout = () => {
           <div className="mb-6 space-y-3">
             <h3 className="text-lg font-semibold mb-4">Payment Method</h3>
 
-            <label className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:border-black transition-colors">
+            {/* <label className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:border-black transition-colors">
               <input
                 type="radio"
                 name="payment"
@@ -249,7 +250,7 @@ const Checkout = () => {
                 <span className="font-medium">PayPal</span>
                 <p className="text-sm text-gray-600">Pay with your PayPal account</p>
               </div>
-            </label>
+            </label> */}
 
             <label className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:border-black transition-colors">
               <input

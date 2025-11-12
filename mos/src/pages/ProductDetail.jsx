@@ -4,6 +4,7 @@ import { doc, getDoc, collection, query, orderBy, onSnapshot, addDoc, serverTime
 import { db } from "../firebase/firebaseConfig";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
+import { toast } from "react-toastify";
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -54,18 +55,16 @@ export default function ProductDetail() {
   const averageRating = comments.length ? (comments.reduce((s,c)=>s+(c.rating||0),0)/comments.length).toFixed(1) : null;
 
   const handleAddToCart = () => {
-    if (product.sizes?.length && !selectedSize) return alert("Please select a size");
-    if (product.colors?.length && !selectedColor) return alert("Please select a color");
+    // ensure CartContext addItem receives selectedSize
     addItem({
       id: product.id,
       title: product.title,
       price: product.price,
-      quantity: qty,
-      size: selectedSize,
-      color: selectedColor,
       imageUrls: product.imageUrls || [],
+      quantity: qty || 1,
+      selectedSize: selectedSize || "Free",
     });
-    alert("Added to cart");
+    toast.success("Added to cart");
   };
 
   const submitComment = async (e) => {
@@ -162,14 +161,29 @@ export default function ProductDetail() {
 
           {product.sizes?.length > 0 && (
             <div className="mt-4">
-              <h4 className="font-medium">Sizes</h4>
-              <div className="flex gap-2 mt-2">
-                {product.sizes.map(s => (
-                  <button key={s} onClick={()=>setSelectedSize(s)}
-                    className={`px-3 py-1 border ${selectedSize===s? "border-black":"border-gray-300"}`}>
-                    {s}
+              <h4 className="text-sm font-medium mb-2">Size</h4>
+
+              <div className="flex flex-wrap gap-2">
+                {/* existing sizes, if any */}
+                {(product?.sizes || []).map((sz) => (
+                  <button
+                    key={sz}
+                    type="button"
+                    onClick={() => setSelectedSize(sz)}
+                    className={`px-3 py-1 border rounded ${selectedSize === sz ? "bg-black text-white" : "bg-white"}`}
+                  >
+                    {sz}
                   </button>
                 ))}
+
+                {/* Free size button */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedSize("Free")}
+                  className={`px-3 py-1 border rounded ${selectedSize === "Free" ? "bg-black text-white" : "bg-white"}`}
+                >
+                  Free size
+                </button>
               </div>
             </div>
           )}

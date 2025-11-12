@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { auth } from "../firebase/firebaseConfig";
+import { useAuth } from "../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -9,6 +10,7 @@ const Register = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const auth = useAuth();
   const navigate = useNavigate();
 
   const handleRegister = async (e) => {
@@ -45,6 +47,24 @@ const Register = () => {
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    try {
+      if (auth && typeof auth.signInWithGoogle === "function") {
+        await auth.signInWithGoogle();
+      } else if (auth && typeof auth.signInWithPopup === "function") {
+        await auth.signInWithPopup();
+      } else {
+        toast.error("Google sign-in not configured in AuthContext");
+        return;
+      }
+      navigate("/");
+    } catch (err) {
+      console.error("Google sign-in error:", err);
+      // show auth error code/message so you can diagnose quickly
+      toast.error(err?.code ? `${err.code}: ${err.message}` : "Google sign-in failed");
     }
   };
 
@@ -134,6 +154,19 @@ const Register = () => {
               </button>
             </div>
           </form>
+
+          <div className="mt-4">
+            {/* keep your existing email/password register button */}
+            {/* Add Google button below */}
+            <button
+              type="button"
+              onClick={handleGoogleSignUp}
+              className="w-full mt-3 inline-flex items-center justify-center gap-2 px-4 py-2 border rounded bg-white hover:bg-gray-50"
+            >
+              {/* simple label — replace with Google icon if desired */}
+              Sign up with Google
+            </button>
+          </div>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
