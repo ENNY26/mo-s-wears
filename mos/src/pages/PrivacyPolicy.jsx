@@ -29,7 +29,7 @@ export default function PrivacyPolicy() {
           <h1 className="text-5xl font-light tracking-wider mb-4 bg-gradient-to-r from-purple-600 to-lilac-500 bg-clip-text text-transparent">
             Privacy Policy
           </h1>
-          <p className="text-purple-600 font-light">Last updated: January 2025</p>
+          <p className="text-purple-600 font-light">Last updated: November 2025</p>
         </motion.div>
 
         {/* Content */}
@@ -84,13 +84,7 @@ export default function PrivacyPolicy() {
             </ul>
           </section>
 
-          {/* Section 4 */}
-          <section>
-            <h2 className="text-2xl font-semibold text-purple-800 mb-4">4. Security of Data</h2>
-            <p className="text-gray-700 leading-relaxed font-light">
-              The security of your data is important to us but remember that no method of transmission over the Internet or method of electronic storage is 100% secure. While we strive to use commercially acceptable means to protect your Personal Data, we cannot guarantee its absolute security.
-            </p>
-          </section>
+    
 
           {/* Section 5 */}
           <section>

@@ -29,7 +29,7 @@ export default function RefundPolicy() {
           <h1 className="text-5xl font-light tracking-wider mb-4 bg-gradient-to-r from-purple-600 to-lilac-500 bg-clip-text text-transparent">
             Refund Policy
           </h1>
-          <p className="text-purple-600 font-light">Last updated: January 2025</p>
+          <p className="text-purple-600 font-light">Last updated: November 2025</p>
         </motion.div>
 
         {/* Content */}
@@ -75,7 +75,7 @@ export default function RefundPolicy() {
               To initiate a return, please follow these steps:
             </p>
             <ol className="list-decimal list-inside space-y-2 text-gray-700 font-light ml-2">
-              <li>Contact our customer service team at support@themosclothing.com with your order number</li>
+              <li>Contact our customer service team at mosclothing459@gmail.com with your order number</li>
               <li>Provide details about the item you wish to return</li>
               <li>Receive return shipping instructions and a prepaid return label</li>
               <li>Pack the item securely and ship it to us using the provided label</li>
