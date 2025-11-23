@@ -6,7 +6,7 @@ import { useUser } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
-export default function Cart() {
+const Cart = () => {
   const {
     cart, // may be undefined if provider missing — guard below
     updateQuantity,
@@ -27,19 +27,6 @@ export default function Cart() {
   const total = subtotal + tax + shipping;
 
   const handleCheckout = () => {
-    if (!user) {
-      toast.info("Please login to proceed to checkout");
-      navigate("/login");
-      return;
-    }
-
-    // Check if user has an address
-    if (!userProfile?.addresses || userProfile.addresses.length === 0) {
-      toast.info("Please add a shipping address before checkout");
-      navigate("/addresses");
-      return;
-    }
-
     navigate("/checkout");
   };
 
@@ -47,25 +34,9 @@ export default function Cart() {
     navigate("/");
   };
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <svg className="w-24 h-24 text-gray-400 mx-auto mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-          </svg>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Please log in to view your cart</h2>
-          <p className="text-gray-600 mb-6">Sign in to see your items and start shopping.</p>
-          <button
-            onClick={() => navigate("/login")}
-            className="bg-black text-white px-8 py-3 rounded-md hover:bg-gray-800 transition-colors duration-200 font-medium"
-          >
-            Sign In
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // allow guests to view cart and proceed to checkout (guest checkout)
+  // if you want to encourage sign-in, show a small banner but don't block
+  // (render continues into the normal cart UI)
 
   if (items.length === 0) {
     return (
@@ -204,6 +175,14 @@ export default function Cart() {
                   </div>
                 </div>
 
+                {/* Guest notice */}
+                {!user && items.length > 0 && (
+                  <div className="mb-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded text-yellow-800">
+                    You're checking out as a guest. You can sign in before completing purchase to save your order history,
+                    or continue as guest to complete payment.
+                  </div>
+                )}
+
                 {/* Checkout Buttons */}
                 <div className="space-y-4">
                   <button
@@ -249,3 +228,5 @@ export default function Cart() {
     </div>
   );
 };
+
+export default Cart;

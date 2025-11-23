@@ -1,3 +1,4 @@
+// context/AuthContext.jsx
 import React, { createContext, useContext, useEffect, useState } from "react";
 import {
   getAuth,
@@ -5,11 +6,18 @@ import {
   signOut,
   signInWithPopup,
   GoogleAuthProvider,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword
 } from "firebase/auth";
 import { auth as firebaseAuth } from "../firebase/firebaseConfig";
 
 const AuthContext = createContext(null);
-export const useAuth = () => useContext(AuthContext);
+
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  return ctx;
+};
 
 export const AuthProvider = ({ children }) => {
   const auth = firebaseAuth || getAuth();
@@ -17,20 +25,40 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u || null);
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setUser(user || null);
       setLoading(false);
     });
     return () => unsub();
   }, [auth]);
 
+  const signInWithEmail = async (email) => {
+    // Generate a random password for email-only login
+    const tempPassword = Math.random().toString(36).slice(-8) + "Aa1!";
+    
+    try {
+      // Try to sign in first
+      return await signInWithEmailAndPassword(auth, email, tempPassword);
+    } catch (error) {
+      if (error.code === 'auth/user-not-found') {
+        // If user doesn't exist, create account
+        return await createUserWithEmailAndPassword(auth, email, tempPassword);
+      }
+      throw error;
+    }
+  };
+
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    return signInWithPopup(auth, provider);
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    });
+    return await signInWithPopup(auth, provider);
   };
 
   const signOutUser = async () => {
-    return signOut(auth);
+    await signOut(auth);
+    setUser(null);
   };
 
   return (
@@ -38,8 +66,10 @@ export const AuthProvider = ({ children }) => {
       value={{
         user,
         loading,
+        signInWithEmail,
         signInWithGoogle,
         signOutUser,
+        logout: signOutUser,
       }}
     >
       {children}

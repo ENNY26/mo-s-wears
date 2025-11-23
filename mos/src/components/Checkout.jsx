@@ -1,136 +1,132 @@
+// components/Checkout.jsx - Updated Guest Flow
 import { useState, useEffect } from "react";
 import { useCart } from "../context/CartContext";
-import { useUser } from "../context/UserContext";
-import { usePayment } from "../context/PaymentContext";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import PayPalButton from "./PayPalButton";
 import { toast } from "react-toastify";
+import { createStripeSessionOnServer } from "../utils/stripeApi";
+import { loadStripe } from "@stripe/stripe-js";
 
 const Checkout = () => {
-  const { cart, getCartTotal, clearCart } = useCart() || {};
-  const { userProfile, getDefaultAddress } = useUser() || {};
-  const { processPayPalPayment, processStripePayment } = usePayment() || {};
-  const { user } = useAuth() || {};
+  const { user } = useAuth();
   const navigate = useNavigate();
-
-  // normalize cart items (handle either cart array or { items: [] } shape)
-  const items = Array.isArray(cart) ? cart : Array.isArray(cart?.items) ? cart.items : [];
-
-  const [selectedPayment, setSelectedPayment] = useState("");
-  const [shippingAddress, setShippingAddress] = useState(null);
-  const [billingAddress, setBillingAddress] = useState(null);
-  const [sameAsShipping, setSameAsShipping] = useState(true);
+  const { cart, getCartTotal, clearCart } = useCart() || {};
   const [processing, setProcessing] = useState(false);
+  const [shippingAddress, setShippingAddress] = useState({
+    name: "",
+    email: "",
+    street: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    country: "US"
+  });
 
-  const subtotal =
-    typeof getCartTotal === "function" ? getCartTotal() : items.reduce((s, i) => s + (i.price || 0) * (i.quantity || 0), 0);
-  // Fixed tax and shipping rules:
-  const tax = 1.99; // fixed tax
-  const shipping = subtotal > 100 ? 0 : 7.99; // free shipping for orders over $100
+  const items = Array.isArray(cart) ? cart : [];
+
+  const subtotal = typeof getCartTotal === "function" ? getCartTotal() : 
+    items.reduce((s, i) => s + (i.price || 0) * (i.quantity || 0), 0);
+  
+  const tax = 1.99;
+  const shipping = subtotal > 100 ? 0 : 7.99;
   const total = subtotal + tax + shipping;
 
-  // ==========================
-  // ✅ Auth + Cart Validation
-  // ==========================
   useEffect(() => {
-    if (!user) {
-      toast.error("Please log in to checkout");
-      navigate("/login");
-      return;
-    }
-
     if (items.length === 0) {
       toast.error("Your cart is empty");
       navigate("/cart");
       return;
     }
 
-    const defaultAddress = typeof getDefaultAddress === "function" ? getDefaultAddress() : null;
-    if (defaultAddress) {
-      setShippingAddress(defaultAddress);
-      setBillingAddress(defaultAddress);
+    // Pre-fill email if user is logged in
+    if (user) {
+      setShippingAddress(prev => ({
+        ...prev,
+        email: user.email,
+        name: user.displayName || ""
+      }));
     }
-  }, [user, cart, navigate, getDefaultAddress]); // keep cart in deps to update when provider changes
+  }, [user, items.length, navigate]);
 
-  // ==========================
-  // ✅ PayPal Handlers
-  // ==========================
-  const handlePayPalSuccess = async (paymentData) => {
+  const handleInputChange = (field, value) => {
+    setShippingAddress(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleStripePayment = async () => {
+    // Validate shipping address
+    const requiredFields = ['name', 'email', 'street', 'city', 'state', 'zipCode'];
+    const missingFields = requiredFields.filter(field => !shippingAddress[field]);
+    
+    if (missingFields.length > 0) {
+      toast.error("Please fill in all required shipping information");
+      return;
+    }
+
+    if (!/\S+@\S+\.\S+/.test(shippingAddress.email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
     setProcessing(true);
+    
     try {
-      const result = await processPayPalPayment({
-        ...paymentData,
+      // call helper that creates session on server and redirects to Stripe
+      const result = await processStripePayment({
+        items,
+        total,
         shippingAddress,
-        billingAddress: sameAsShipping ? shippingAddress : billingAddress,
+        user: user || { email: shippingAddress.email } // Guest user object
       });
-
+ 
       if (result.success) {
-        toast.success("Payment successful! Order placed.");
+        toast.success("Order placed successfully!");
         clearCart();
-        navigate("/orders");
+        navigate("/payment-success");
       } else {
         throw new Error(result.error || "Payment failed");
       }
     } catch (error) {
-      console.error("PayPal payment error:", error);
+      console.error("Payment error:", error);
       toast.error("Payment failed. Please try again.");
     } finally {
       setProcessing(false);
     }
   };
 
-  const handlePayPalError = (error) => {
-    console.error("PayPal error:", error);
-    toast.error("PayPal payment failed. Please try again.");
-    setProcessing(false);
-  };
-
-  // ==========================
-  // ✅ Stripe Handler
-  // ==========================
-  const handleStripePayment = async () => {
-    if (!shippingAddress) {
-      toast.error("Please select a shipping address");
-      return;
-    }
-
-    setProcessing(true);
+  // -- new helper: create Stripe session server-side and redirect client to Checkout --
+  async function processStripePayment({ items, total, shippingAddress, user }) {
     try {
-      const result = await processStripePayment(shippingAddress);
+      // Send cart items and shipping info to your server function
+      // createStripeSessionOnServer should return { url } or { id } for session
+      const session = await createStripeSessionOnServer(items, total, user, shippingAddress);
 
-      if (result.success) {
-        toast.success("Redirecting to Stripe Checkout...");
-      } else {
-        throw new Error(result.error || "Stripe payment failed");
+      // If your server returns a direct URL (session.url) use it
+      if (session?.url) {
+        window.location.href = session.url;
+        return { success: true };
       }
-    } catch (error) {
-      console.error("Stripe checkout error:", error);
-      toast.error("Stripe checkout failed. Please try again.");
-    } finally {
-      setProcessing(false);
-    }
-  };
 
-  // ==========================
-  // ✅ Rendering
-  // ==========================
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Please log in to checkout
-          </h2>
-          <button
-            onClick={() => navigate("/login")}
-            className="bg-black text-white px-6 py-3 rounded-md hover:bg-gray-800"
-          >
-            Login
-          </button>
-        </div>
-      </div>
-    );
+      // Otherwise, if server returned a session id, use Stripe.js to redirect
+      if (session?.id) {
+        const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+        if (!publishableKey) {
+          console.error("Missing VITE_STRIPE_PUBLISHABLE_KEY in env");
+          return { success: false, error: "Client Stripe key not configured" };
+        }
+        const stripe = await loadStripe(publishableKey);
+        const { error } = await stripe.redirectToCheckout({ sessionId: session.id });
+        if (error) throw error;
+        return { success: true };
+      }
+
+      return { success: false, error: "No checkout session returned from server" };
+    } catch (err) {
+      console.error("processStripePayment error:", err);
+      return { success: false, error: err?.message || "Server error" };
+    }
   }
 
   if (items.length === 0) {
@@ -149,213 +145,150 @@ const Checkout = () => {
     );
   }
 
-  if (!userProfile?.addresses || userProfile.addresses.length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Shipping address required</h2>
-          <p className="text-gray-600 mb-6">
-            Please add a shipping address before checkout.
-          </p>
-          <button
-            onClick={() => navigate("/addresses")}
-            className="bg-black text-white px-6 py-3 rounded-md hover:bg-gray-800"
-          >
-            Add Address
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ==========================
-  // ✅ Checkout Layout
-  // ==========================
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Section */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Checkout</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Checkout {!user && "(Guest)"}</h2>
 
-          {/* Shipping Address */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-4">Shipping Address</h3>
-            <select
-              value={shippingAddress ? JSON.stringify(shippingAddress) : ""}
-              onChange={(e) => {
-                const address = JSON.parse(e.target.value);
-                setShippingAddress(address);
-                if (sameAsShipping) setBillingAddress(address);
-              }}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-black"
-              required
-            >
-              <option value="">Select shipping address</option>
-              {userProfile.addresses.map((address) => (
-                <option key={address.id} value={JSON.stringify(address)}>
-                  {address.name} - {address.street}, {address.city}
-                  {address.isDefault && " (Default)"}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Billing Address */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-4">Billing Address</h3>
-            <label className="flex items-center mb-3">
-              <input
-                type="checkbox"
-                checked={sameAsShipping}
-                onChange={(e) => {
-                  setSameAsShipping(e.target.checked);
-                  if (e.target.checked) setBillingAddress(shippingAddress);
-                }}
-                className="rounded border-gray-300 text-black focus:ring-black"
-              />
-              <span className="ml-2 text-gray-700">Same as shipping address</span>
-            </label>
-
-            {!sameAsShipping && (
-              <select
-                value={billingAddress ? JSON.stringify(billingAddress) : ""}
-                onChange={(e) => setBillingAddress(JSON.parse(e.target.value))}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-black"
-              >
-                <option value="">Select billing address</option>
-                {userProfile.addresses.map((address) => (
-                  <option key={address.id} value={JSON.stringify(address)}>
-                    {address.name} - {address.street}, {address.city}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          {/* Payment Options */}
-          <div className="mb-6 space-y-3">
-            <h3 className="text-lg font-semibold mb-4">Payment Method</h3>
-
-            {/* <label className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:border-black transition-colors">
-              <input
-                type="radio"
-                name="payment"
-                value="paypal"
-                checked={selectedPayment === "paypal"}
-                onChange={(e) => setSelectedPayment(e.target.value)}
-                className="text-black focus:ring-black"
-              />
-              <div className="ml-3">
-                <span className="font-medium">PayPal</span>
-                <p className="text-sm text-gray-600">Pay with your PayPal account</p>
-              </div>
-            </label> */}
-
-            <label className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:border-black transition-colors">
-              <input
-                type="radio"
-                name="payment"
-                value="stripe"
-                checked={selectedPayment === "stripe"}
-                onChange={(e) => setSelectedPayment(e.target.value)}
-                className="text-black focus:ring-black"
-              />
-              <div className="ml-3">
-                <span className="font-medium">Stripe</span>
-                <p className="text-sm text-gray-600">Pay securely with card using Stripe</p>
-              </div>
-            </label>
-          </div>
-
-          {/* Payment Buttons */}
-          {selectedPayment === "paypal" && shippingAddress && (
-            <div className="border-t pt-4">
-              <PayPalButton
-                amount={total}
-                onSuccess={handlePayPalSuccess}
-                onError={handlePayPalError}
-              />
-            </div>
-          )}
-
-          {selectedPayment === "stripe" && shippingAddress && (
-            <div className="border-t pt-4">
-              <button
-                onClick={handleStripePayment}
-                disabled={processing}
-                className={`w-full bg-black text-white py-3 rounded-md hover:bg-gray-800 transition ${
-                  processing ? "opacity-70 cursor-not-allowed" : ""
-                }`}
-              >
-                {processing ? "Processing..." : "Pay with Card (Stripe)"}
-              </button>
-            </div>
-          )}
-
-          {processing && (
-            <div className="text-center mt-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-black mx-auto"></div>
-              <p className="text-sm text-gray-600 mt-2">Processing payment...</p>
-            </div>
-          )}
-        </div>
-
-        {/* Right Section: Order Summary */}
-        <div className="bg-white rounded-lg shadow-lg p-6 h-fit">
-          <h3 className="text-lg font-semibold mb-4">Order Summary</h3>
-
-          <div className="space-y-4 mb-6">
-            {items.map((item) => (
-              <div key={`${item.id}-${item.selectedSize}`} className="flex items-center space-x-4">
-                <img
-                  src={item.imageUrls?.[0]}
-                  alt={item.title}
-                  className="w-16 h-16 object-cover rounded-md"
-                />
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900">{item.title}</p>
-                  <p className="text-sm text-gray-600">Size: {item.selectedSize}</p>
-                  <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
-                </div>
-                <p className="font-medium text-gray-900">
-                  ${(item.price * item.quantity).toFixed(2)}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div className="border-t pt-4 space-y-2">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Subtotal</span>
-              <span className="text-gray-900">${subtotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Shipping</span>
-              <span className="text-gray-900">${shipping.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Tax</span>
-              <span className="text-gray-900">${tax.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-lg font-semibold border-t pt-2">
-              <span>Total</span>
-              <span>${total.toFixed(2)}</span>
-            </div>
-          </div>
-
-          {shippingAddress && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <h4 className="font-medium text-gray-900 mb-2">Shipping to:</h4>
-              <p className="text-sm text-gray-600">
-                {shippingAddress.name}
-                <br />
-                {shippingAddress.street}
-                <br />
-                {shippingAddress.city}, {shippingAddress.state} {shippingAddress.zipCode}
+          {/* Guest Notice */}
+          {!user && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-blue-800">
+                <strong>Guest Checkout:</strong> You can complete your purchase without creating an account. 
+                We'll email your order confirmation to {shippingAddress.email || 'the address you provide'}.
               </p>
             </div>
           )}
+
+          {/* Shipping Information */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold mb-4">Shipping Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                <input
+                  type="text"
+                  value={shippingAddress.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-black"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                <input
+                  type="email"
+                  value={shippingAddress.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-black"
+                  required
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Street Address *</label>
+                <input
+                  type="text"
+                  value={shippingAddress.street}
+                  onChange={(e) => handleInputChange('street', e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-black"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
+                <input
+                  type="text"
+                  value={shippingAddress.city}
+                  onChange={(e) => handleInputChange('city', e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-black"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">State *</label>
+                <input
+                  type="text"
+                  value={shippingAddress.state}
+                  onChange={(e) => handleInputChange('state', e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-black"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code *</label>
+                <input
+                  type="text"
+                  value={shippingAddress.zipCode}
+                  onChange={(e) => handleInputChange('zipCode', e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-black"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Section */}
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold mb-4">Payment Method</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-sm text-gray-600 mb-4">
+                Secure payment processed by Stripe. We accept all major credit cards.
+              </p>
+              
+              <button
+                onClick={handleStripePayment}
+                disabled={processing}
+                className={`w-full bg-black text-white py-4 px-6 rounded-lg font-semibold hover:bg-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 ${
+                  processing ? "opacity-70 cursor-not-allowed" : ""
+                }`}
+              >
+                {processing ? "Processing..." : `Pay $${total.toFixed(2)} with Stripe`}
+              </button>
+            </div>
+          </div>
+
+          {/* Order Summary */}
+          <div className="mt-8 border-t pt-6">
+            <h3 className="text-lg font-semibold mb-4">Order Summary</h3>
+            <div className="space-y-3">
+              {items.map((item) => (
+                <div key={`${item.id}-${item.selectedSize}`} className="flex justify-between items-center">
+                  <div className="flex items-center space-x-3">
+                    <img
+                      src={item.imageUrls?.[0]}
+                      alt={item.title}
+                      className="w-12 h-12 object-cover rounded"
+                    />
+                    <div>
+                      <p className="font-medium">{item.title}</p>
+                      <p className="text-sm text-gray-600">Size: {item.selectedSize} × {item.quantity}</p>
+                    </div>
+                  </div>
+                  <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
+                </div>
+              ))}
+              
+              <div className="border-t pt-3 space-y-2">
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span>${subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Shipping</span>
+                  <span>${shipping.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Tax</span>
+                  <span>${tax.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between font-semibold text-lg border-t pt-2">
+                  <span>Total</span>
+                  <span>${total.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

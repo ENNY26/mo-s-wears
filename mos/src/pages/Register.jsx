@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
-import { auth } from "../firebase/firebaseConfig";
+import { auth as firebaseAuth } from "../firebase/firebaseConfig"; // alias to avoid shadowing
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -10,40 +10,36 @@ const Register = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const auth = useAuth();
+  const authCtx = useAuth(); // <--- renamed to avoid clobbering firebase auth
   const navigate = useNavigate();
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    
     if (password !== confirmPassword) {
       toast.error("Passwords do not match");
       return;
     }
-    
     if (password.length < 6) {
       toast.error("Password must be at least 6 characters long");
       return;
     }
 
     setIsLoading(true);
-    
     try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
+      const result = await createUserWithEmailAndPassword(firebaseAuth, email, password);
       await sendEmailVerification(result.user);
-      
       toast.success("Verification email sent! Please check your inbox.");
       navigate("/login");
     } catch (error) {
       console.error("Registration error:", error);
-      
-      // More user-friendly error messages
-      const errorMessage = 
-        error.code === 'auth/email-already-in-use' ? 'Email already exists' :
-        error.code === 'auth/weak-password' ? 'Password is too weak' :
-        error.code === 'auth/invalid-email' ? 'Invalid email address' :
-        error.message;
-      
+      const errorMessage =
+        error.code === "auth/email-already-in-use"
+          ? "Email already exists"
+          : error.code === "auth/weak-password"
+          ? "Password is too weak"
+          : error.code === "auth/invalid-email"
+          ? "Invalid email address"
+          : error.message;
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -52,10 +48,8 @@ const Register = () => {
 
   const handleGoogleSignUp = async () => {
     try {
-      if (auth && typeof auth.signInWithGoogle === "function") {
-        await auth.signInWithGoogle();
-      } else if (auth && typeof auth.signInWithPopup === "function") {
-        await auth.signInWithPopup();
+      if (authCtx && typeof authCtx.signInWithGoogle === "function") {
+        await authCtx.signInWithGoogle();
       } else {
         toast.error("Google sign-in not configured in AuthContext");
         return;
@@ -63,7 +57,6 @@ const Register = () => {
       navigate("/");
     } catch (err) {
       console.error("Google sign-in error:", err);
-      // show auth error code/message so you can diagnose quickly
       toast.error(err?.code ? `${err.code}: ${err.message}` : "Google sign-in failed");
     }
   };

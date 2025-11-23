@@ -1,6 +1,11 @@
 // src/firebase/firebaseConfig.js
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  setPersistence, 
+  browserLocalPersistence 
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
@@ -16,8 +21,18 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Export initialized services
+// Initialize Auth and set persistence
 export const auth = getAuth(app);
+
+// Set persistence to local (user stays logged in between sessions)
+setPersistence(auth, browserLocalPersistence)
+  .then(() => {
+    console.log("Auth persistence set to local");
+  })
+  .catch((error) => {
+    console.error("Error setting auth persistence:", error);
+  });
+
 export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app);
 export const storage = getStorage(app);
