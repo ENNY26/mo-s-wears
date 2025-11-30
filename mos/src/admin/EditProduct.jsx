@@ -15,6 +15,7 @@ const EditProduct = () => {
     price: "",
     category: "",
     sizes: [],
+    tag: "",
   });
   const [existingImages, setExistingImages] = useState([]);
   const [newImages, setNewImages] = useState([]);
@@ -22,6 +23,7 @@ const EditProduct = () => {
   const [loading, setLoading] = useState(true);
 
   const categories = ["Dress","2-piece", "Children Collection", "Pants", "Jackets", "Shoes", "Accessories"];
+  const tags = ["", "kids", "women", "men", "unisex"];
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -37,6 +39,7 @@ const EditProduct = () => {
             price: productData.price || "",
             category: productData.category || "",
             sizes: productData.sizes || [],
+            tag: productData.tag || "",
           });
           setExistingImages(productData.imageUrls || []);
         } else {
@@ -122,6 +125,7 @@ const EditProduct = () => {
         price: parseFloat(form.price),
         imageUrls: allImageUrls,
         sizes: form.sizes,
+        tag: form.tag,
         updatedAt: new Date(),
       });
 
@@ -191,6 +195,22 @@ const EditProduct = () => {
                   <option value="">Select a category</option>
                   {categories.map(category => (
                     <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </div>
+            
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tag
+                </label>
+                <select
+                  name="tag"
+                  value={form.tag}
+                  onChange={(e) => setForm(prev => ({ ...prev, tag: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                >
+                  {tags.map(t => (
+                    <option key={t} value={t}>{t === "" ? "Select a tag (optional)" : t}</option>
                   ))}
                 </select>
               </div>

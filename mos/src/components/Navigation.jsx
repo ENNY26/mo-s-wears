@@ -67,10 +67,10 @@ export default function Navigation() {
               Women
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-purple-600 group-hover:w-full transition-all duration-300"></span>
             </a>
-            <a href="#" className="text-gray-700 hover:text-purple-600 transition-colors duration-300 relative group">
+            <Link to="/kids" className="text-gray-700 hover:text-purple-600 transition-colors duration-300 relative group">
               Children
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-purple-600 group-hover:w-full transition-all duration-300"></span>
-            </a>
+            </Link>
             <a href="#" className="text-red-600 hover:text-red-700 transition-colors duration-300 font-semibold relative group">
               Sale
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-red-600 group-hover:w-full transition-all duration-300"></span>
@@ -203,9 +203,9 @@ export default function Navigation() {
               <a href="#" className="block text-gray-700 hover:text-purple-600 transition-colors font-medium py-2">
                 Women
               </a>
-              <a href="#" className="block text-gray-700 hover:text-purple-600 transition-colors font-medium py-2">
+              <Link to="/kids" className="block text-gray-700 hover:text-purple-600 transition-colors font-medium py-2" onClick={() => setMobileMenuOpen(false)}>
                 Children
-              </a>
+              </Link>
               <a href="#" className="block text-red-600 hover:text-red-700 transition-colors font-semibold py-2">
                 Sale
               </a>

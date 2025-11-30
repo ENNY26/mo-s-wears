@@ -43,11 +43,13 @@ export default function AddProduct() {
   const [files, setFiles] = useState([]);
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [tag, setTag] = useState("");
   const [sizes, setSizes] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const categories = ["Dress", "2-piece", "Children Collection", "Jackets", "Shoes", "Accessories"];
+  const tags = ["", "kids", "women", "men", "unisex"];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -64,6 +66,7 @@ export default function AddProduct() {
         description,
         category,
         sizes,
+        tag,
       };
 
       await addDoc(collection(db, "products"), docData);
@@ -74,6 +77,7 @@ export default function AddProduct() {
       setDescription("");
       setCategory("");
       setSizes([]);
+      setTag("");
     } catch (err) {
       console.error("Add product failed:", err);
       toast.error("Failed to add product");
@@ -118,6 +122,22 @@ export default function AddProduct() {
                 <option value="">Select a category</option>
                 {categories.map(category => (
                   <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tag
+              </label>
+              <select
+                name="tag"
+                value={tag}
+                onChange={(e) => setTag(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              >
+                {tags.map(t => (
+                  <option key={t} value={t}>{t === "" ? "Select a tag (optional)" : t}</option>
                 ))}
               </select>
             </div>

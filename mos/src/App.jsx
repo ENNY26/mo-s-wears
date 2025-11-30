@@ -27,6 +27,8 @@ import RefundPolicy from "./pages/RefundPolicy";
 import AddProduct from "./admin/AddProduct";
 import AdminPage from "./admin/AdminPage";
 import EditProduct from "./admin/EditProduct";
+import KidsProducts from "./pages/KidsProducts";
+import { useAuth } from "./context/AuthContext";
 
 // Import Shared Navigation
 import Navigation from "./components/Navigation";
@@ -57,6 +59,7 @@ function App() {
                     <Route path="/payment-success" element={<PaymentSuccess />} />
                     <Route path="/payment-cancelled" element={<PaymentCancelled />} />
                     <Route path="/product/:id" element={<ProductDetail />} />
+                    <Route path="/kids" element={<KidsProducts />} />
                     
                     {/* Admin Routes */}
                     <Route path="/admin" element={<ProtectedAdminRoute><AdminPage /></ProtectedAdminRoute>} />
